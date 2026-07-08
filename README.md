@@ -42,3 +42,9 @@ flowchart TD
     classDef pain fill:#ffe5e5,stroke:#d9534f,color:#a94442;
     class P1,P2,P3,P4,P5 pain;
 ```
+
+Questions to evaluate the application:
+- Does the AI avoid giving away the solution immediately?
+- Does the AI ask follow-up questions after the user proposes an approach?
+- Does the AI encourage the user to explain their reasoning before coding?
+- Does the AI generate actionable feedback after the interview?
