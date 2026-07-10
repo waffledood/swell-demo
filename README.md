@@ -230,7 +230,7 @@ Persist state
 
 For example:
 
-```
+```json
 {
   "type": "CANDIDATE_MESSAGE",
   "payload": {
@@ -241,7 +241,7 @@ For example:
 
 The LLM evaluator might return structured output:
 
-```
+```json
 {
   "observations": [
     {
