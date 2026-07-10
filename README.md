@@ -48,3 +48,15 @@ Questions to evaluate the application:
 - Does the AI ask follow-up questions after the user proposes an approach?
 - Does the AI encourage the user to explain their reasoning before coding?
 - Does the AI generate actionable feedback after the interview?
+
+## Task 2: Propose a Solution
+
+swell is an AI-powered software engineering coach that simulates realistic technical interviews to help engineers master data structures and algorithms through pair programming.
+
+### Infrastructure Diagram
+
+![swell-arch-diagram](./media/swell-arch-clearbg.svg)
+
+### Agent Workflow Diagram
+
+![]()
