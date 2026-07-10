@@ -57,6 +57,44 @@ swell is an AI-powered software engineering coach that simulates realistic techn
 
 ![swell-arch-diagram](./media/swell-arch.svg)
 
+Examples of events emitted:
+
+- `CANDIDATE_MESSAGE` (a message submitted by the candidate to the AI Interview Chat panel)
+   ```json
+   {
+     "type": "CANDIDATE_MESSAGE",
+     "payload": {
+       "text": "I think I can use a hash map to store previously seen values."
+     }
+   }
+   ```
+
+- `CODE_SNAPSHOT` (a snapshot of the code from the Code Editor)
+   ```json
+   {
+     "type": "CODE_SNAPSHOT",
+     "payload": {
+       "language": "python",
+       "code": "def two_sum(nums, target):\n    seen = {}",
+       "change_summary": {
+         "lines_added": 2,
+         "lines_removed": 0
+       }
+     }
+   }
+   ```
+
+- `CANDIDATE_IDLE` (the candidate has been idle for `N` time)
+   ```json
+   {
+     "type": "CANDIDATE_IDLE",
+     "payload": {
+       "duration_seconds": 30,
+       "last_activity_type": "CODE_SNAPSHOT"
+     }
+   }
+   ```
+
 ### Agent Workflow Diagram
 
 ```mermaid
