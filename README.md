@@ -55,7 +55,7 @@ swell is an AI-powered software engineering coach that simulates realistic techn
 
 ### Infrastructure Diagram
 
-![swell-arch-diagram](./media/swell-arch-clearbg.svg)
+![swell-arch-diagram](./media/swell-arch.svg)
 
 ### Agent Workflow Diagram
 
