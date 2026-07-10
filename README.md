@@ -59,4 +59,74 @@ swell is an AI-powered software engineering coach that simulates realistic techn
 
 ### Agent Workflow Diagram
 
-![]()
+```mermaid
+flowchart TD
+
+    Start([Start Interview])
+
+    Load[Load problem and session memory]
+
+    Display[Display problem and editor]
+
+    Event[Receive candidate event]
+
+    Context[Build interview context]
+
+    NeedRAG{Need additional knowledge?}
+
+    Retrieve[RAG retrieves rubric, hints and edge cases]
+
+    Decide[LLM evaluates interview state]
+
+    Action{Next action?}
+
+    Ask[Ask follow-up question]
+
+    Hint[Provide progressive hint]
+
+    RunCode[Execute code]
+
+    Wait[Wait for candidate]
+
+    Update[Update memory and milestones]
+
+    Finish{Interview finished?}
+
+    Feedback[Generate feedback]
+
+    Save[Save long-term memory]
+
+    End([Return report])
+
+    Start --> Load
+    Load --> Display
+    Display --> Event
+    Event --> Context
+
+    Context --> NeedRAG
+
+    NeedRAG -- Yes --> Retrieve
+    NeedRAG -- No --> Decide
+
+    Retrieve --> Decide
+
+    Decide --> Action
+
+    Action -->|Question| Ask
+    Action -->|Hint| Hint
+    Action -->|Run code| RunCode
+    Action -->|Nothing| Wait
+
+    Ask --> Update
+    Hint --> Update
+    RunCode --> Update
+    Wait --> Event
+
+    Update --> Finish
+
+    Finish -- No --> Event
+    Finish -- Yes --> Feedback
+
+    Feedback --> Save
+    Save --> End
+```
