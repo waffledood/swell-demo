@@ -4,17 +4,22 @@ Context for Claude Code when working in this repo.
 
 ## What this repo is
 
-This is a **course submission repo**, not a standalone product repo. It's being built for the
-**Certification Challenge** of an AI Engineering course (see `Certification_Challenge.md` for the
-full assignment brief and `Cert Challenge Rubric.xlsx` for the grading rubric). The rubric's
-"Status" column is the instructor's stock template (defaults to mostly "Completed") — it does
-**not** reflect actual progress in this repo. Treat the README and the actual code/data/eval
-artifacts present in the repo as the source of truth for what's actually done.
+This is a **course submission / written-deliverables repo**, not where the application code lives.
+It's being built for the **Certification Challenge** of an AI Engineering course (see
+`Certification_Challenge.md` for the full assignment brief and `Cert Challenge Rubric.xlsx` for the
+grading rubric). The rubric's "Status" column is the instructor's stock template (defaults to
+mostly "Completed") — it does **not** reflect actual progress. Treat `README.md` as the source of
+truth for what's actually done.
 
 - **Due**: Thursday, July 16 2026, 7pm ET.
-- **Submission format**: this GitHub repo, containing a <=10 min Loom demo video (linked, not
-  committed), a written document addressing every deliverable (currently `README.md`), and all
-  relevant code.
+- **Submission format**: the brief asks for a single public GitHub repo containing a <=10 min Loom
+  demo video (linked, not committed), a written document addressing every deliverable, and all
+  relevant code. The user has split this across **two repos**:
+  - `swell-demo` (this repo): written document (`README.md`), diagrams, planning artifacts.
+  - [`swell`](https://github.com/waffledood/swell): the actual application code (frontend,
+    backend, agent, evals, etc.).
+  - Since the brief technically expects one repo with everything, make sure the final `README.md`
+    clearly links to the `swell` repo (and vice versa) so a grader can navigate between them.
 
 ## The project: "swell"
 
@@ -33,7 +38,7 @@ document that answers all of them in order. Current state:
 | 1 | Problem, audience, scope (workflow diagram, eval questions) | Done |
 | 2 | Proposed solution (infra diagram, agent workflow diagram, state model) | Done |
 | 3 | Data strategy (chunking, external API/data sources) | Not started |
-| 4 | End-to-end prototype + deployment | Not started (no code in repo yet) |
+| 4 | End-to-end prototype + deployment | Not started (code lives in the separate `swell` repo, not here) |
 | 5 | Evals (test set + harness + conclusions) | Not started |
 | 6 | Advanced retrieval + one more improvement, with before/after comparison | Not started |
 | 7 | Next steps / Demo Day reflection | Not started |
@@ -67,10 +72,13 @@ be named explicitly):
 
 ## Working conventions
 
-- This repo has no application code yet — work so far is docs and diagrams only. Don't scaffold
-  a backend/frontend structure or lock in code conventions until the stack decisions above are
-  actually made with the user.
+- This repo intentionally has no application code — that lives in the separate
+  [`swell`](https://github.com/waffledood/swell) repo. Don't scaffold a backend/frontend structure
+  here; if asked to build the prototype, confirm whether the work should happen in this repo or
+  in `swell` before writing code.
 - Diagrams in the README use Mermaid (inline) for flowcharts; the infra diagram is a standalone
   SVG in `media/`.
 - Keep `README.md` structured as one section per Certification Challenge task, matching the
   numbering in `Certification_Challenge.md`, so it can be graded/read against the rubric directly.
+- When writing up Tasks 3-7 in `README.md`, cross-reference the relevant code/commits in the
+  `swell` repo where useful (e.g. linking to the chunking implementation, the eval harness, etc.).
