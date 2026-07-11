@@ -89,7 +89,7 @@ Selection of technologies:
 
 - Agent orchestration framework: `LangGraph` - the interview is a stateful, branching flow (understand → discuss approach → code → feedback), so it needs explicit state tracking and conditional routing (hint vs. question vs. code execution) rather than a single-shot prompt chain
 
-- Tool(s): retriever (vector search over `Qdrant`) - the agent calls this to pull the rubric, hint ladder, or expected edge cases so it can evaluate whether the candidate's approach or code actually satisfies them; no other external tool calls are needed for the midterm slice (single problem, no web search), and code execution is platform infra, not an agent-invoked tool
+- Tool(s): retriever (vector search over `Qdrant`) - the agent calls this to pull the rubric, hint ladder, or expected edge cases so it can evaluate whether the candidate's approach or code actually satisfies them; `Tavily` search - the agent calls this only for general programming/CS concept questions decoupled from the Two Sum problem itself (e.g. "is dict ordering guaranteed in Python 3.7+?"), scoped so it can never be used to look up the problem or its solution; code execution is platform infra, not an agent-invoked tool
 
 - Embedding model: OpenAI's `text-embedding-3-small` - embeds each problem's knowledge base (rubric, hint ladder, edge cases) so the agent can retrieve grounded guidance during the RAG step instead of improvising hints from the base model alone
 
@@ -326,3 +326,33 @@ if event.type == "CANDIDATE_IDLE":
 if state.failed_run_count >= 3:
     state.candidate_status = "DEBUGGING_DIFFICULTY"
 ```
+
+## Task 3: Dealing with the Data
+
+### Data sources and external API
+
+swell's Agentic RAG has two distinct legs: a curated knowledge base for anything specific to the
+Two Sum interview, and an external search API for general programming/CS knowledge that base doesn't (and shouldn't) contain.
+
+**Own data (RAG, embedded into `Qdrant`)** — five hand-authored documents scoped to the midterm's single problem:
+
+1. **Problem statement** — the Two Sum prompt, constraints, and examples shown to the candidate.
+2. **Hint ladder** — progressive hints from vague to specific (e.g. "think about what you need to remember as you scan the array" → "a hash map lets you check for a complement in `O(1)`"), used by the `hint_level` field in the state model.
+3. **Edge case list** — duplicate values, no valid pair, negative numbers, etc. — what the coach
+   should surface when a candidate asks a clarifying question like scenario #9.
+4. **Reference solutions** — brute-force `O(n²)` and hash-map `O(n)`, annotated with their time/space
+   complexity, used to check a candidate's claimed complexity against ground truth.
+5. **Milestone/rubric criteria** — the definitions behind each milestone in the state model (`UNDERSTANDS_PROBLEM`, `CLARIFIES_CONSTRAINTS`, `PROPOSES_APPROACH`, `IMPLEMENTS_CORRECT_SOLUTION`, etc.), so the LLM evaluator grades against a grounded rubric instead of inferring what each milestone means on its own.
+
+These are authored and version-controlled rather than scraped — the corpus is small enough to hand-verify for correctness, which matters more here than breadth, since a wrong edge case or a mislabeled complexity would directly corrupt the coach's evaluation of the candidate.
+
+**External API: `Tavily`** — used only for general programming/CS concept questions that fall outside the curated KB (e.g. "is dict ordering guaranteed in Python 3.7+?", "what's a hash collision?"). This is deliberately scoped: an open-ended web search tool could otherwise be used by the agent to look up "Two Sum optimal solution" directly, which would leak the answer the coach is supposed to withhold (see scenarios #1 and #4 in Task 1). The tool's description restricts it to problem-agnostic language/CS concepts and it is never invoked with the problem name or
+solution-shaped queries.
+
+**How they interact**: during the `Decide` step of the agent workflow, the LLM has both the retriever and the Tavily search tool available. Anything about the Two Sum problem itself — hints, edge cases, expected complexity, milestone grading — is answered exclusively from the retriever/`Qdrant` corpus. Tavily is only reached for tangential CS/Python questions the candidate asks that the curated corpus was never meant to cover. The two never overlap in practice: the retriever's corpus is Two-Sum-specific and Tavily is scoped to be everything-but-Two-Sum.
+
+### Chunking strategy
+
+Default chunking is **one chunk per structural unit** — one hint per chunk, one edge case per chunk, one milestone definition per chunk, one reference solution per chunk — rather than fixed-size token windows.
+
+Why: the corpus is small and hand-authored (not long-form prose), and retrieval needs are precise — a query like "candidate asked about duplicates" needs exactly the duplicates edge case, not a sliding window that also drags in unrelated hint or rubric text. Chunking along the existing structural boundaries means every retrieved chunk is independently coherent and attributable, which also matters for the RAGAS faithfulness/context-precision metrics from Task 5 — it's much easier to judge whether a hint is "grounded in the retrieved context" when that context is exactly one edge case or one hint level, not an arbitrary token-count slice that mixes several.
