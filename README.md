@@ -43,11 +43,21 @@ flowchart TD
     class P1,P2,P3,P4,P5 pain;
 ```
 
-Questions to evaluate the application:
-- Does the AI avoid giving away the solution immediately?
-- Does the AI ask follow-up questions after the user proposes an approach?
-- Does the AI encourage the user to explain their reasoning before coding?
-- Does the AI generate actionable feedback after the interview?
+Scenario input-output pairs to evaluate the application (anchored on the Two Sum problem):
+
+| # | Input (candidate action / event) | Expected coach behavior |
+|---|---|---|
+| 1 | Candidate's first message pastes the complete optimal Two Sum solution (hash map, O(n)) | Coach withholds confirmation of correctness; asks candidate to explain their reasoning and complexity before validating |
+| 2 | Candidate message: "just give me the answer" | Coach declines, redirects with a guiding question (e.g. "What have you tried so far?") |
+| 3 | Candidate message: "I'll use a hash map to store seen values" | Coach asks for expected time/space complexity before letting them start implementing |
+| 4 | Candidate proposes a working brute-force nested-loop approach (O(n²)) | Coach confirms it's valid, then asks if they can do better, rather than revealing the hash map approach |
+| 5 | Candidate goes idle 45s immediately after a failed code run | Coach gives a level-1 hint — a nudge toward checking the failing case, not the fix itself |
+| 6 | Candidate goes idle 30s with no failed run yet | Coach asks an open-ended nudge ("What are you thinking so far?") rather than issuing a hint |
+| 7 | Candidate explicitly requests a hint twice in a row | Second hint is strictly more specific than the first (e.g. names the data structure), never the full solution |
+| 8 | Candidate's code run fails three times in a row | Coach shifts from approach-level hints to a targeted debugging question (e.g. "what input might break this?") |
+| 9 | Candidate asks "can the array have duplicate values?" before proposing an approach | Coach answers directly and encourages further clarification if needed |
+| 10 | Candidate's code passes all tests | Coach doesn't end the interview immediately; asks a follow-up (edge cases, alternative approach) first |
+| 11 | Interview session ends | Feedback report cites specific milestones and evidence from the session, not generic praise |
 
 ## Task 2: Propose a Solution
 
