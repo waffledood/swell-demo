@@ -83,6 +83,26 @@ swell is an AI-powered software engineering coach that simulates realistic techn
 
 ![swell-arch-diagram](./media/swell-arch.svg)
 
+Selection of technologies:
+
+- LLM(s): `claude-sonnet-5` - chosen for strong reasoning to evaluate the candidate's explanations and code in real time and to generate adaptive coaching dialogue (hints, follow-ups, feedback) rather than scripted responses
+
+- Agent orchestration framework: `LangGraph` - the interview is a stateful, branching flow (understand → discuss approach → code → feedback), so it needs explicit state tracking and conditional routing (hint vs. question vs. code execution) rather than a single-shot prompt chain
+
+- Tool(s): retriever (vector search over `Qdrant`) - the agent calls this to pull the rubric, hint ladder, or expected edge cases so it can evaluate whether the candidate's approach or code actually satisfies them; no other external tool calls are needed for the midterm slice (single problem, no web search), and code execution is platform infra, not an agent-invoked tool
+
+- Embedding model: OpenAI's `text-embedding-3-small` - embeds each problem's knowledge base (rubric, hint ladder, edge cases) so the agent can retrieve grounded guidance during the RAG step instead of improvising hints from the base model alone
+
+- Vector Database: `Qdrant` - stores those embeddings and serves the RAG retrieval step with fast filtered search, and is easy to self-host during development
+
+- Monitoring tool: `LangSmith`, `LangGraph Studio` - integrated with the Langchain ecosystem & ties in nicely with the `LangGraph` graph we built out
+
+- Evaluation framework: `RAGAS` - measures whether retrieved rubric/hint content is faithfully used and relevant, since an ungrounded hint (e.g. one that leaks the answer or cites the wrong edge case) is a core failure mode to catch
+
+- User interface: `ReactJS + vite` - fast dev/HMR iteration on the chat + code-editor split-pane layout, with a mature ecosystem for embedding a code editor component (e.g. Monaco/CodeMirror) next to the chat panel
+
+- Deployment tool: `Vercel`, `LangGraph Platform` - Vercel deploys the React frontend with zero-config CI/CD suited to fast iteration; LangGraph Platform hosts the LangGraph agent itself (persistence, streaming) instead of custom agent-hosting infra
+
 Examples of events emitted:
 
 - `CANDIDATE_MESSAGE` (a message submitted by the candidate to the AI Interview Chat panel)
