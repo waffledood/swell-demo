@@ -43,21 +43,37 @@ flowchart TD
     class P1,P2,P3,P4,P5 pain;
 ```
 
+### Midterm vertical slice
+
+The full vision above (multi-problem bank, long-term candidate memory across sessions, etc.) is
+the target state, not the midterm deliverable. Per instructor feedback, the midterm scopes down to
+a single vertical slice through the product:
+
+- **One problem**: Two Sum problem only — no problem bank or selection of problems flow.
+- **One language**: Python only — no multi-language execution/support.
+- **Chat + simple editor**: a basic code editor pane alongside the chat interface — no advanced
+  IDE features (multi-file, linting, etc.).
+- **Session memory**: state persists for the duration of a single interview session (see the core
+  state model below) — no long-term memory across sessions or candidates yet.
+- **Explicitly out of scope for the midterm**: multi-problem bank, long-term/cross-session memory.
+
+Everything below (Tasks 2-7) should be read against this narrowed scope unless otherwise noted.
+
 Scenario input-output pairs to evaluate the application (anchored on the Two Sum problem):
 
-| # | Input (candidate action / event) | Expected coach behavior |
-|---|---|---|
-| 1 | Candidate's first message pastes the complete optimal Two Sum solution (hash map, O(n)) | Coach withholds confirmation of correctness; asks candidate to explain their reasoning and complexity before validating |
-| 2 | Candidate message: "just give me the answer" | Coach declines, redirects with a guiding question (e.g. "What have you tried so far?") |
-| 3 | Candidate message: "I'll use a hash map to store seen values" | Coach asks for expected time/space complexity before letting them start implementing |
-| 4 | Candidate proposes a working brute-force nested-loop approach (O(n²)) | Coach confirms it's valid, then asks if they can do better, rather than revealing the hash map approach |
-| 5 | Candidate goes idle 45s immediately after a failed code run | Coach gives a level-1 hint — a nudge toward checking the failing case, not the fix itself |
-| 6 | Candidate goes idle 30s with no failed run yet | Coach asks an open-ended nudge ("What are you thinking so far?") rather than issuing a hint |
-| 7 | Candidate explicitly requests a hint twice in a row | Second hint is strictly more specific than the first (e.g. names the data structure), never the full solution |
-| 8 | Candidate's code run fails three times in a row | Coach shifts from approach-level hints to a targeted debugging question (e.g. "what input might break this?") |
-| 9 | Candidate asks "can the array have duplicate values?" before proposing an approach | Coach answers directly and encourages further clarification if needed |
-| 10 | Candidate's code passes all tests | Coach doesn't end the interview immediately; asks a follow-up (edge cases, alternative approach) first |
-| 11 | Interview session ends | Feedback report cites specific milestones and evidence from the session, not generic praise |
+| #   | Input (candidate action / event)                                                        | Expected coach behavior                                                                                                 |
+| --- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 1   | Candidate's first message pastes the complete optimal Two Sum solution (hash map, O(n)) | Coach withholds confirmation of correctness; asks candidate to explain their reasoning and complexity before validating |
+| 2   | Candidate message: "just give me the answer"                                            | Coach declines, redirects with a guiding question (e.g. "What have you tried so far?")                                  |
+| 3   | Candidate message: "I'll use a hash map to store seen values"                           | Coach asks for expected time/space complexity before letting them start implementing                                    |
+| 4   | Candidate proposes a working brute-force nested-loop approach (O(n²))                   | Coach confirms it's valid, then asks if they can do better, rather than revealing the hash map approach                 |
+| 5   | Candidate goes idle 45s immediately after a failed code run                             | Coach gives a level-1 hint — a nudge toward checking the failing case, not the fix itself                               |
+| 6   | Candidate goes idle 30s with no failed run yet                                          | Coach asks an open-ended nudge ("What are you thinking so far?") rather than issuing a hint                             |
+| 7   | Candidate explicitly requests a hint twice in a row                                     | Second hint is strictly more specific than the first (e.g. names the data structure), never the full solution           |
+| 8   | Candidate's code run fails three times in a row                                         | Coach shifts from approach-level hints to a targeted debugging question (e.g. "what input might break this?")           |
+| 9   | Candidate asks "can the array have duplicate values?" before proposing an approach      | Coach answers directly and encourages further clarification if needed                                                   |
+| 10  | Candidate's code passes all tests                                                       | Coach doesn't end the interview immediately; asks a follow-up (edge cases, alternative approach) first                  |
+| 11  | Interview session ends                                                                  | Feedback report cites specific milestones and evidence from the session, not generic praise                             |
 
 ## Task 2: Propose a Solution
 
@@ -70,40 +86,42 @@ swell is an AI-powered software engineering coach that simulates realistic techn
 Examples of events emitted:
 
 - `CANDIDATE_MESSAGE` (a message submitted by the candidate to the AI Interview Chat panel)
-   ```json
-   {
-     "type": "CANDIDATE_MESSAGE",
-     "payload": {
-       "text": "I think I can use a hash map to store previously seen values."
-     }
-   }
-   ```
+
+  ```json
+  {
+    "type": "CANDIDATE_MESSAGE",
+    "payload": {
+      "text": "I think I can use a hash map to store previously seen values."
+    }
+  }
+  ```
 
 - `CODE_SNAPSHOT` (a snapshot of the code from the Code Editor)
-   ```json
-   {
-     "type": "CODE_SNAPSHOT",
-     "payload": {
-       "language": "python",
-       "code": "def two_sum(nums, target):\n    seen = {}",
-       "change_summary": {
-         "lines_added": 2,
-         "lines_removed": 0
-       }
-     }
-   }
-   ```
+
+  ```json
+  {
+    "type": "CODE_SNAPSHOT",
+    "payload": {
+      "language": "python",
+      "code": "def two_sum(nums, target):\n    seen = {}",
+      "change_summary": {
+        "lines_added": 2,
+        "lines_removed": 0
+      }
+    }
+  }
+  ```
 
 - `CANDIDATE_IDLE` (the candidate has been idle for `N` time)
-   ```json
-   {
-     "type": "CANDIDATE_IDLE",
-     "payload": {
-       "duration_seconds": 30,
-       "last_activity_type": "CODE_SNAPSHOT"
-     }
-   }
-   ```
+  ```json
+  {
+    "type": "CANDIDATE_IDLE",
+    "payload": {
+      "duration_seconds": 30,
+      "last_activity_type": "CODE_SNAPSHOT"
+    }
+  }
+  ```
 
 ### Agent Workflow Diagram
 
@@ -190,9 +208,7 @@ The core state model of each interview session would look something like:
   "status": "IN_PROGRESS",
   "current_phase": "APPROACH_DISCUSSION",
   "candidate_status": "PROGRESSING",
-  "completed_milestones": [
-    "UNDERSTANDS_PROBLEM"
-  ],
+  "completed_milestones": ["UNDERSTANDS_PROBLEM"],
   "milestones": {
     "UNDERSTANDS_PROBLEM": {
       "status": "COMPLETED",
