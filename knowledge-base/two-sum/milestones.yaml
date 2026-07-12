@@ -1,0 +1,27 @@
+milestones:
+  - id: UNDERSTANDS_PROBLEM
+    criteria: >
+      Candidate restates the goal (find two indices whose values sum to target) in
+      their own words.
+  - id: CLARIFIES_CONSTRAINTS
+    criteria: >
+      Candidate asks at least one clarifying question (e.g. duplicates, negative
+      numbers, array size) before proposing an approach.
+  - id: PROPOSES_APPROACH
+    criteria: >
+      Candidate verbally proposes an algorithmic approach, even brute-force, before
+      writing code.
+  - id: PROPOSES_HASH_MAP
+    criteria: >
+      Candidate proposes using a hash map (or equivalent) to reduce lookup time to O(1).
+  - id: STATES_COMPLEXITY
+    criteria: >
+      Candidate states the time and space complexity of their proposed approach.
+  - id: HANDLES_EDGE_CASES
+    criteria: >
+      Candidate reasons about at least one edge case (duplicates, negatives, self-match)
+      either proactively or in response to a coach prompt.
+  - id: IMPLEMENTS_CORRECT_SOLUTION
+    criteria: >
+      Candidate's code passes all test cases. Set deterministically from the
+      CODE_RUN_COMPLETED event's all_tests_passed field, not inferred by the LLM.

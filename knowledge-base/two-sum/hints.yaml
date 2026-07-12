@@ -1,0 +1,18 @@
+hints:
+  - level: 1
+    text: >
+      Think about what information you'd need to remember as you scan through the array.
+  - level: 2
+    text: >
+      For each number, ask yourself: have I seen its complement (target - number) before?
+  - level: 3
+    text: >
+      What's a data structure that lets you check the complement (target - number) efficiently?
+  - level: 4
+    text: >
+      A hash map lets you check for a complement in O(1) instead of scanning the array
+      again for it.
+  - level: 5
+    text: >
+      Store each number's index in the hash map as you go, so that when you find a
+      complement already in the map, you can return both indices immediately.

@@ -1,0 +1,24 @@
+reference_solutions:
+  - approach: brute_force
+    complexity:
+      time: "O(n^2)"
+      space: "O(1)"
+    code: |
+      def two_sum(nums, target):
+          for i in range(len(nums)):
+              for j in range(i + 1, len(nums)):
+                  if nums[i] + nums[j] == target:
+                      return [i, j]
+
+  - approach: hash_map
+    complexity:
+      time: "O(n)"
+      space: "O(n)"
+    code: |
+      def two_sum(nums, target):
+          seen = {}
+          for i, num in enumerate(nums):
+              complement = target - num
+              if complement in seen:
+                  return [seen[complement], i]
+              seen[num] = i

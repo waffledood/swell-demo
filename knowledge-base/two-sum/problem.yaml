@@ -1,0 +1,39 @@
+problem_id: two-sum
+title: Two Sum
+
+base_question: >
+  Given an array of integers `nums` and an integer `target`, return the indices of the
+  two numbers such that they add up to `target`.
+
+  You may assume that each input has exactly one solution, and you may not use the same
+  element twice.
+
+clarifications:
+  - question: "Can the array contain duplicate values?"
+    answer: >
+      Yes, the array may contain duplicate values. The same value can appear more than
+      once, but the same index cannot be used twice.
+  - question: "Can I use the same element twice?"
+    answer: >
+      No, each element may only be used once. The two returned indices must be different.
+  - question: "Is the array sorted?"
+    answer: "No, you should not assume the array is sorted."
+  - question: "What if there's no valid pair?"
+    answer: >
+      Per the constraints, exactly one valid answer is guaranteed to exist, so you don't
+      need to handle the no-solution case for this problem.
+
+example_test_cases:
+  - input: "nums = [2,7,11,15], target = 9"
+    output: "[0,1]"
+    explanation: "nums[0] + nums[1] == 9, so return [0, 1]."
+  - input: "nums = [3,2,4], target = 6"
+    output: "[1,2]"
+  - input: "nums = [3,3], target = 6"
+    output: "[0,1]"
+
+constraints:
+  - "2 <= nums.length <= 10^4"
+  - "-10^9 <= nums[i] <= 10^9"
+  - "-10^9 <= target <= 10^9"
+  - "Only one valid answer exists."

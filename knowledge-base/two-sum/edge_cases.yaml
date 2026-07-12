@@ -1,0 +1,21 @@
+edge_cases:
+  - name: duplicate_values
+    text: >
+      The array may contain duplicate values (e.g. [3,3] with target 6). Each value can
+      repeat, but the same index cannot be reused - the candidate's solution should key
+      on index, not just value.
+  - name: negative_numbers
+    text: >
+      The array may contain negative numbers and the target may be negative. The
+      hash-map approach should handle this without special-casing, since it relies on
+      arithmetic (target - number), not sign.
+  - name: complement_matches_self_before_stored
+    text: >
+      If a number's complement is itself (e.g. target is double the current number), the
+      candidate's solution must check the hash map for the complement before inserting
+      the current number, otherwise it will incorrectly match an element with itself.
+  - name: order_of_returned_indices
+    text: >
+      The problem does not require indices to be returned in any particular order, but
+      the candidate should be able to state whether their solution guarantees an order
+      and why.
