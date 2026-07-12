@@ -1,4 +1,6 @@
-import React, { useRef, useState } from "react";
+"use client";
+
+import { useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 
 const starterCode = `def two_sum(nums, target):
@@ -104,7 +106,7 @@ function CodingWorkspace() {
   );
 }
 
-export default function App() {
+export function Workspace() {
   const workspaceRef = useRef(null);
   const [problemPanelWidth, setProblemPanelWidth] = useState(50);
   const [isResizing, setIsResizing] = useState(false);

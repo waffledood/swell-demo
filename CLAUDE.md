@@ -28,8 +28,11 @@ solve problems in isolation like on LeetCode/HackerRank.
 ## Repo layout
 
 - `README.md` — the written deliverable, one section per Certification Challenge task.
-- `fe/` — the frontend app (React + Vite). Renamed from `swell-fe` when consolidated in from the
-  old `swell` repo.
+- `fe/` — the frontend app (Next.js, App Router). Renamed from `swell-fe` when consolidated in
+  from the old `swell` repo; originally a ReactJS + Vite SPA, switched to Next.js so its
+  `app/api/[...path]/route.js` Route Handler can act as the LLM gateway (hides `LANGGRAPH_API_URL`
+  / `LANGSMITH_API_KEY` server-side — a pure SPA has no server runtime to hide them in). Needs
+  `LANGGRAPH_API_URL` and `LANGSMITH_API_KEY` set (see `fe/.env.local.example`) to build or run.
 - `knowledge-base/two-sum/` — hand-authored RAG source data for the midterm's single problem
   (`problem.yaml`, `hints.yaml`, `edge_cases.yaml`, `reference_solutions.yaml`,
   `milestones.yaml`). See Task 3 in `README.md` for the chunking strategy these files are meant to
@@ -47,7 +50,7 @@ document that answers all of them in order. Current state:
 | 1 | Problem, audience, scope (workflow diagram, eval questions) | Done |
 | 2 | Proposed solution (infra diagram, agent workflow diagram, state model) | Done |
 | 3 | Data strategy (chunking, external API/data sources) | Done |
-| 4 | End-to-end prototype + deployment | In progress — `fe/` and `knowledge-base/` are in place; backend/agent and deployment still needed |
+| 4 | End-to-end prototype + deployment | In progress — `fe/` (Next.js, with LLM gateway route), and `knowledge-base/` are in place; agent/backend and deployment still needed |
 | 5 | Evals (test set + harness + conclusions) | Not started |
 | 6 | Advanced retrieval + one more improvement, with before/after comparison | Not started |
 | 7 | Next steps / Demo Day reflection | Not started |
@@ -59,7 +62,14 @@ spreadsheet's status column.
 
 Decided (visible in `media/swell-arch.svg` and `README.md`'s infrastructure diagram):
 
-- **Frontend**: ReactJS + Vite (`fe/`)
+- **Frontend**: Next.js, App Router (`fe/`)
+- **LLM gateway**: Next.js Route Handler (`fe/app/api/[...path]/route.js`, via
+  `langgraph-nextjs-api-passthrough`) — client calls same-origin `/api/*` only; the Route Handler
+  forwards server-side to the LangGraph deployment. Satisfies the brief's "use an LLM gateway"
+  requirement. Note: the passthrough package itself warns this pattern is no longer LangGraph's
+  recommended auth approach — implementing custom auth directly in the LangGraph deployment
+  (Python/TS `custom_auth`) is the current recommendation and worth revisiting once Task 4's agent
+  backend exists.
 - **LLM**: `claude-sonnet-5`
 - **Agent orchestration**: LangGraph
 - **Tools**: retriever over Qdrant (problem-specific RAG), Tavily search (scoped to general
@@ -71,15 +81,20 @@ Decided (visible in `media/swell-arch.svg` and `README.md`'s infrastructure diag
   Datasets/Evaluators (behavioral/rubric grading) — see Task 3 discussion for why RAGAS alone
   isn't sufficient here
 - **State/session persistence**: PostgreSQL
-- **Deployment**: Vercel (frontend), LangGraph Platform (agent)
+- **Deployment**: Vercel (Next.js app: frontend + LLM gateway), LangGraph Platform (agent)
 - Architecture also includes a load balancer layer (auth, rate-limiting) and an event
   collector/processor in front of the agent orchestrator (see the `CANDIDATE_MESSAGE` /
-  `CODE_SNAPSHOT` / `CANDIDATE_IDLE` event types documented in the README).
+  `CODE_SNAPSHOT` / `CANDIDATE_IDLE` event types documented in the README). The Next.js gateway is
+  deliberately a thin passthrough (auth/rate-limiting/forwarding only) — event normalization and
+  deterministic rules stay in the Python LangGraph agent, not the gateway, to avoid duplicating
+  that logic across two languages.
 
 **Still open / not yet decided** — do not assume or invent a specific choice here; surface it as
 an open decision when it becomes relevant:
 
-- Backend web framework/language
+- Backend web framework/language for the agent/session-persistence layer itself (the LLM gateway
+  question is now resolved by Next.js above, but the LangGraph agent + Postgres persistence layer
+  behind it still needs a framework/language)
 
 ## Working conventions
 

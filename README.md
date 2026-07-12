@@ -114,12 +114,16 @@ Selection of technologies:
     Measures whether retrieved rubric/hint content is faithfully used and relevant, since an ungrounded hint (e.g. one that leaks the answer or cites the wrong edge case) is a core failure mode to catch
 
 - User interface:
-  - `ReactJS + vite`
-    Fast dev/HMR iteration on the chat + code-editor split-pane layout, with a mature ecosystem for embedding a code editor component (e.g. Monaco/CodeMirror) next to the chat panel
+  - `Next.js` (App Router)
+    Still React underneath, so the chat + code-editor split-pane layout (Monaco) works the same as originally planned, but Next.js's server runtime is what makes the LLM gateway below possible — a pure client-side SPA (the original ReactJS + Vite plan) has no server to hide credentials in, so any LangGraph/LangSmith key it called with would be visible in the browser
+
+- LLM gateway:
+  - Next.js Route Handler (`fe/app/api/[...path]/route.js`, via `langgraph-nextjs-api-passthrough`)
+    Satisfies the brief's requirement to front the LLM with a gateway. The client only ever calls the same-origin `/api/*`; the Route Handler runs server-side and forwards to the LangGraph deployment (`LANGGRAPH_API_URL`) with `LANGSMITH_API_KEY` attached, so the browser never sees the backend URL or the key. This also gives the previously-undecided "load balancer layer (auth, rate-limiting)" a concrete home instead of an open question
 
 - Deployment tool:
   - `Vercel`
-    Vercel deploys the React frontend with zero-config CI/CD suited to fast iteration
+    Vercel deploys the Next.js app (frontend + LLM gateway) with zero-config CI/CD suited to fast iteration
   - `LangGraph Platform`
     LangGraph Platform hosts the LangGraph agent itself (persistence, streaming) instead of custom agent-hosting infra
 
