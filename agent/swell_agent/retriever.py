@@ -4,6 +4,12 @@ collection and exposes it as a retriever tool for the LangGraph agent.
 Rebuilt from knowledge-base/two-sum/*.yaml at process start (see README.md's
 Task 3 "Chunking strategy" - one chunk per structural unit, matching the YAML
 authoring boundaries rather than a generic text splitter).
+
+Hints are deliberately NOT included here - see hints.py. A query like "what's
+a good hint for two sum?" was found to rank the reference solution's code
+above every actual hint, since the hint text never repeats the problem name
+while the solution code literally contains the `two_sum` function name. Hints
+are looked up deterministically by hint_level instead.
 """
 
 from __future__ import annotations
@@ -11,13 +17,14 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal, Optional
 
 import yaml
 from langchain_core.documents import Document
 from langchain_core.tools import tool
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
+from qdrant_client import models
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_KNOWLEDGE_BASE_DIR = (
@@ -76,20 +83,6 @@ def _problem_documents(data: dict[str, Any], problem_id: str) -> list[Document]:
         )
 
     return documents
-
-
-def _hint_documents(data: dict[str, Any], problem_id: str) -> list[Document]:
-    return [
-        Document(
-            page_content=hint["text"],
-            metadata={
-                "problem_id": problem_id,
-                "doc_type": "hint",
-                "level": hint["level"],
-            },
-        )
-        for hint in data.get("hints", [])
-    ]
 
 
 def _edge_case_documents(data: dict[str, Any], problem_id: str) -> list[Document]:
@@ -156,9 +149,6 @@ def load_documents(
 
     documents: list[Document] = []
     documents += _problem_documents(problem, problem_id)
-    documents += _hint_documents(
-        _load_yaml(knowledge_base_dir / "hints.yaml"), problem_id
-    )
     documents += _edge_case_documents(
         _load_yaml(knowledge_base_dir / "edge_cases.yaml"), problem_id
     )
@@ -185,15 +175,47 @@ def _get_vectorstore() -> QdrantVectorStore:
     )
 
 
+DocType = Literal[
+    "base_question",
+    "clarification",
+    "example_test_cases",
+    "constraints",
+    "edge_case",
+    "reference_solution",
+    "milestone",
+]
+
+
 @tool
 def retrieve_problem_context(
     query: Annotated[str, "what to look up about the Two Sum problem"],
+    doc_type: Annotated[
+        Optional[DocType],
+        (
+            "restrict results to one category: base_question, clarification, "
+            "example_test_cases, constraints, edge_case, reference_solution, or "
+            "milestone. Omit to search across all of them. Never returns hints - "
+            "use get_next_hint for those."
+        ),
+    ] = None,
 ) -> str:
-    """Retrieve Two Sum coaching context: the problem statement, clarifications, hint
-    ladder, edge cases, reference solutions, or milestone/rubric criteria. Use this for
-    anything specific to the Two Sum problem itself - never for general programming/CS
-    questions unrelated to this problem (use web search for those instead)."""
-    docs = _get_vectorstore().as_retriever().invoke(query)
+    """Retrieve Two Sum coaching context: the problem statement, clarifications,
+    edge cases, reference solutions, or milestone/rubric criteria. Use the doc_type
+    filter whenever you know which category you need (e.g. milestone criteria) to
+    avoid unrelated categories crowding out the right answer. Never use this for
+    hints (use get_next_hint) or for general programming/CS questions unrelated to
+    this problem (use web search for those instead)."""
+    query_filter = None
+    if doc_type is not None:
+        query_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.doc_type", match=models.MatchValue(value=doc_type)
+                )
+            ]
+        )
+
+    docs = _get_vectorstore().similarity_search(query, k=4, filter=query_filter)
     if not docs:
         return "No matching context found in the knowledge base."
 
@@ -211,5 +233,5 @@ if __name__ == "__main__":
 
     query = " ".join(sys.argv[1:]) or "can the array have duplicate values?"
     print(f"Query: {query}\n")
-    print(retrieve_problem_context.invoke(query))
+    print(retrieve_problem_context.invoke({"query": query}))
 
