@@ -331,17 +331,15 @@ if state.failed_run_count >= 3:
 
 ### Data sources and external API
 
-swell's Agentic RAG has two distinct legs: a curated knowledge base for anything specific to the
-Two Sum interview, and an external search API for general programming/CS knowledge that base doesn't (and shouldn't) contain.
+swell's Agentic RAG has two distinct legs: a curated knowledge base for anything specific to the Two Sum interview, and an external search API for general programming/CS knowledge that base doesn't (and shouldn't) contain.
 
 **Own data (RAG, embedded into `Qdrant`)** — five hand-authored documents scoped to the midterm's single problem:
 
-1. **Problem statement** — the Two Sum prompt, constraints, and examples shown to the candidate.
+1. **Problem statement** — four fields: `base_question`, `clarifications`, `example_test_cases`, `constraints`. Only `base_question` is shown to the candidate by default; the other three are withheld until the candidate asks for them, mirroring how a real interviewer only reveals constraints/examples in response to clarifying questions (see scenario #9 in Task 1).
 2. **Hint ladder** — progressive hints from vague to specific (e.g. "think about what you need to remember as you scan the array" → "a hash map lets you check for a complement in `O(1)`"), used by the `hint_level` field in the state model.
 3. **Edge case list** — duplicate values, no valid pair, negative numbers, etc. — what the coach
    should surface when a candidate asks a clarifying question like scenario #9.
-4. **Reference solutions** — brute-force `O(n²)` and hash-map `O(n)`, annotated with their time/space
-   complexity, used to check a candidate's claimed complexity against ground truth.
+4. **Reference solutions** — brute-force `O(n²)` and hash-map `O(n)`, annotated with their time/space complexity, used to check a candidate's claimed complexity against ground truth.
 5. **Milestone/rubric criteria** — the definitions behind each milestone in the state model (`UNDERSTANDS_PROBLEM`, `CLARIFIES_CONSTRAINTS`, `PROPOSES_APPROACH`, `IMPLEMENTS_CORRECT_SOLUTION`, etc.), so the LLM evaluator grades against a grounded rubric instead of inferring what each milestone means on its own.
 
 These are authored and version-controlled rather than scraped — the corpus is small enough to hand-verify for correctness, which matters more here than breadth, since a wrong edge case or a mislabeled complexity would directly corrupt the coach's evaluation of the candidate.
