@@ -75,13 +75,28 @@ Decided (visible in `media/swell-arch.svg` and `README.md`'s infrastructure diag
 - **Tools**: retriever over Qdrant (problem-specific RAG), Tavily search (scoped to general
   programming/CS concepts, never the problem/solution itself — see Task 3 in `README.md`)
 - **Embedding model**: OpenAI `text-embedding-3-small`
-- **Vector DB**: Qdrant
+- **Vector DB**: Qdrant, in-memory (`location=":memory:"`), rebuilt from
+  `knowledge-base/two-sum/*.yaml` at agent cold start — no separately hosted Qdrant service. The
+  knowledge base is 5 small YAML files, so re-embedding at startup is near-instant and there's
+  nothing to persist across restarts anyway (the YAML files, not the vector index, are the source
+  of truth). Revisit this if the knowledge base grows well beyond the single-problem scope.
 - **Monitoring**: LangSmith, LangGraph Studio
 - **Evaluation framework**: RAGAS (retrieval-quality metrics) + LLM-as-judge via LangSmith
   Datasets/Evaluators (behavioral/rubric grading) — see Task 3 discussion for why RAGAS alone
   isn't sufficient here
-- **State/session persistence**: PostgreSQL
-- **Deployment**: Vercel (Next.js app: frontend + LLM gateway), LangGraph Platform (agent)
+- **Backend/agent hosting**: Python, deployed to LangGraph Platform Cloud/SaaS (via LangSmith) —
+  no separate FastAPI/Express layer. LangGraph Platform's own server exposes the threads/runs/
+  streaming API that the frontend's gateway (`fe/app/api/[...path]/route.js`) already forwards to,
+  so adding a custom backend framework in front of it would just be a redundant proxy.
+- **State/session persistence**: PostgreSQL, but **managed automatically by LangGraph Platform
+  Cloud/SaaS** as the graph's checkpointer — nothing to provision or wire up yourself. (This only
+  holds for the Cloud/SaaS deployment tier; LangGraph Platform's Self-Hosted tiers require you to
+  bring your own Postgres/Redis instead.) The milestones/`hint_level`/phase fields in the core
+  state model persist for free as long as they live in the graph's `State` schema. This managed
+  Postgres is only reachable through LangGraph's thread/state APIs, not raw SQL — if a future need
+  requires arbitrary queries across session history, that would need a separate, self-provisioned
+  Postgres written to explicitly from a node.
+- **Deployment**: Vercel (Next.js app: frontend + LLM gateway), LangGraph Platform Cloud (agent)
 - Architecture also includes a load balancer layer (auth, rate-limiting) and an event
   collector/processor in front of the agent orchestrator (see the `CANDIDATE_MESSAGE` /
   `CODE_SNAPSHOT` / `CANDIDATE_IDLE` event types documented in the README). The Next.js gateway is
@@ -89,12 +104,8 @@ Decided (visible in `media/swell-arch.svg` and `README.md`'s infrastructure diag
   deterministic rules stay in the Python LangGraph agent, not the gateway, to avoid duplicating
   that logic across two languages.
 
-**Still open / not yet decided** — do not assume or invent a specific choice here; surface it as
-an open decision when it becomes relevant:
-
-- Backend web framework/language for the agent/session-persistence layer itself (the LLM gateway
-  question is now resolved by Next.js above, but the LangGraph agent + Postgres persistence layer
-  behind it still needs a framework/language)
+**Still open / not yet decided**: none currently — all major stack decisions are resolved above.
+If a new one surfaces, add it here rather than assuming or inventing a choice.
 
 ## Working conventions
 

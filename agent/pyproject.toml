@@ -1,0 +1,21 @@
+[project]
+name = "swell-agent"
+version = "0.1.0"
+description = "LangGraph coaching agent for swell, deployed on LangGraph Platform"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "langchain-core>=1.2.16",
+    "langchain-openai>=0.3.0",
+    "langchain-qdrant>=1.1.0",
+    "qdrant-client>=1.17.0",
+    "pyyaml>=6.0.2",
+    "python-dotenv>=1.2.2",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["swell_agent*"]

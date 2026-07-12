@@ -3,3 +3,12 @@ dist
 .env
 .env.local
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# LangGraph
+.langgraph_api/
