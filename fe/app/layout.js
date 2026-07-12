@@ -23,10 +23,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${outfit.variable} h-full`}
-    >
+    <html lang="en" className={`${inter.variable} ${outfit.variable} h-full`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
