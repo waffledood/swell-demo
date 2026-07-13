@@ -20,7 +20,7 @@ import yaml
 from langchain_core.tools import tool
 
 DEFAULT_KNOWLEDGE_BASE_DIR = (
-    Path(__file__).resolve().parents[2] / "knowledge-base" / "two-sum"
+    Path(__file__).resolve().parents[1] / "knowledge-base" / "two-sum"
 )
 
 

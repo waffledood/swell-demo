@@ -15,7 +15,7 @@ from pathlib import Path
 import yaml
 
 DEFAULT_KNOWLEDGE_BASE_DIR = (
-    Path(__file__).resolve().parents[2] / "knowledge-base" / "two-sum"
+    Path(__file__).resolve().parents[1] / "knowledge-base" / "two-sum"
 )
 
 

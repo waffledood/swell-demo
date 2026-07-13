@@ -33,10 +33,13 @@ solve problems in isolation like on LeetCode/HackerRank.
   `app/api/[...path]/route.js` Route Handler can act as the LLM gateway (hides `LANGGRAPH_API_URL`
   / `LANGSMITH_API_KEY` server-side — a pure SPA has no server runtime to hide them in). Needs
   `LANGGRAPH_API_URL` and `LANGSMITH_API_KEY` set (see `fe/.env.local.example`) to build or run.
-- `knowledge-base/two-sum/` — hand-authored RAG source data for the midterm's single problem
+- `agent/knowledge-base/two-sum/` — hand-authored RAG source data for the midterm's single problem
   (`problem.yaml`, `hints.yaml`, `edge_cases.yaml`, `reference_solutions.yaml`,
   `milestones.yaml`). See Task 3 in `README.md` for the chunking strategy these files are meant to
-  support (one chunk per structural unit/entry).
+  support (one chunk per structural unit/entry). Lives inside `agent/` (not at the repo root) so
+  it's included in LangGraph Platform's deployment build, which only packages the directory
+  containing `langgraph.json` (`ADD . /deps/agent` in the generated Dockerfile) — this moved here
+  after a deployed run failed with `FileNotFoundError` when it lived at the repo root.
 - `media/` — diagrams (e.g. `swell-arch.svg`) referenced from `README.md`.
 - No backend/agent code exists yet — that's Task 4, still to be built.
 
@@ -50,8 +53,8 @@ document that answers all of them in order. Current state:
 | 1 | Problem, audience, scope (workflow diagram, eval questions) | Done |
 | 2 | Proposed solution (infra diagram, agent workflow diagram, state model) | Done |
 | 3 | Data strategy (chunking, external API/data sources) | Done |
-| 4 | End-to-end prototype + deployment | In progress — `fe/` (Next.js, with LLM gateway route), and `knowledge-base/` are in place; agent/backend and deployment still needed |
-| 5 | Evals (test set + harness + conclusions) | Not started |
+| 4 | End-to-end prototype + deployment | In progress — `fe/` (Next.js, with LLM gateway route) and the agent (LangGraph graph + tools) are built; agent is deployed to LangGraph Platform; chat UI in `fe/` and Vercel deployment still needed |
+| 5 | Evals (test set + harness + conclusions) | In progress |
 | 6 | Advanced retrieval + one more improvement, with before/after comparison | Not started |
 | 7 | Next steps / Demo Day reflection | Not started |
 

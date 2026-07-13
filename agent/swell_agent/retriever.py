@@ -28,7 +28,7 @@ from qdrant_client import models
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_KNOWLEDGE_BASE_DIR = (
-    Path(__file__).resolve().parents[2] / "knowledge-base" / "two-sum"
+    Path(__file__).resolve().parents[1] / "knowledge-base" / "two-sum"
 )
 
 
@@ -186,6 +186,26 @@ DocType = Literal[
 ]
 
 
+def retrieve_context_documents(
+    query: str, doc_type: Optional[DocType] = None, k: int = 4
+) -> list[Document]:
+    """Shared retrieval path underneath retrieve_problem_context, returning raw
+    Documents instead of the tool's joined string. Factored out so eval harnesses
+    (see agent/evals/run_ragas_eval.py) can inspect individual retrieved chunks -
+    e.g. per-chunk doc_type and page_content - without re-implementing the filter
+    logic or re-parsing the tool's formatted output."""
+    query_filter = None
+    if doc_type is not None:
+        query_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.doc_type", match=models.MatchValue(value=doc_type)
+                )
+            ]
+        )
+    return _get_vectorstore().similarity_search(query, k=k, filter=query_filter)
+
+
 @tool
 def retrieve_problem_context(
     query: Annotated[str, "what to look up about the Two Sum problem"],
@@ -205,17 +225,7 @@ def retrieve_problem_context(
     avoid unrelated categories crowding out the right answer. Never use this for
     hints (use get_next_hint) or for general programming/CS questions unrelated to
     this problem (use web search for those instead)."""
-    query_filter = None
-    if doc_type is not None:
-        query_filter = models.Filter(
-            must=[
-                models.FieldCondition(
-                    key="metadata.doc_type", match=models.MatchValue(value=doc_type)
-                )
-            ]
-        )
-
-    docs = _get_vectorstore().similarity_search(query, k=4, filter=query_filter)
+    docs = retrieve_context_documents(query, doc_type=doc_type, k=4)
     if not docs:
         return "No matching context found in the knowledge base."
 
