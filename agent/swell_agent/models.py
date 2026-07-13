@@ -10,6 +10,7 @@ DEFAULT_MODEL = "claude-sonnet-5"
 
 
 def get_chat_model(**kwargs) -> ChatAnthropic:
+    kwargs.setdefault("thinking", {"type": "disabled"})
     return ChatAnthropic(
         model=os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL),
         api_key=os.environ.get("ANTHROPIC_API_KEY"),
