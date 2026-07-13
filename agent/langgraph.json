@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": ["."],
+  "env": ".env",
+  "python_version": "3.13",
+  "graphs": {
+    "swell_agent": "swell_agent.graph:graph"
+  },
+  "assistants": {
+    "swell": {
+      "graph_id": "swell_agent",
+      "name": "Swell Interview Coach",
+      "description": "Coaches a candidate through a Two Sum mock technical interview."
+    }
+  }
+}
