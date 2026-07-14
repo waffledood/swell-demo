@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
+import { Chat } from "./chat";
 
 const starterCode = `def two_sum(nums, target):
   # Write your approach here
@@ -208,6 +209,7 @@ export function Workspace() {
           />
         </button>
         <CodingWorkspace />
+        <Chat />
       </div>
     </main>
   );
