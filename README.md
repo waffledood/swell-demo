@@ -2,6 +2,10 @@
 
 A demo repo for swell, an AI software engineering coach that helps you practice data structures and algorithms through realistic technical interviews.
 
+**Demo video**: https://youtu.be/3bcF3ELRArY
+
+**Deliverables traceability**: see [`deliverables.md`](deliverables.md) for a mapping of every rubric deliverable to its exact code location.
+
 ## Task 1: Defining Problem, Audience, and Scope
 
 Software engineers struggle to prepare effectively for technical interviews because practicing coding problems alone does not replicate the experience of a real interview.
