@@ -1,0 +1,398 @@
+# Golden behavioral eval set for the swell coaching agent (Task 5).
+#
+# Expands the 11 scenario input/output pairs in the root README.md's Task 1
+# section into a fuller golden set for LLM-as-judge grading via LangSmith.
+# Each example replays a sequence of InterviewEvents through the compiled
+# graph (build_graph(checkpointer=...), one fresh thread per example - see
+# swell_agent/try_graph.py for the same invocation shape) and checks the
+# final turn's state/response against `expected`.
+#
+# `expected` fields (all optional - only assert what's relevant per example):
+#   recommended_action        - exact match against the final turn's recommended_action
+#   recommended_action_in     - final turn's recommended_action must be one of these
+#   candidate_status          - exact match against the final turn's candidate_status
+#   session_status            - exact match against the final turn's status (IN_PROGRESS/COMPLETED)
+#   milestones                - dict of milestone_id -> expected status, checked against
+#                                the cumulative final milestones dict
+#   response_must_not_contain - case-insensitive substrings that must NOT appear in the
+#                                final coach message of the transcript (deterministic
+#                                safety/leak checks)
+#   first_hint_keywords       - case-insensitive substrings expected in the coach's
+#                                response to the FIRST HINT_REQUESTED turn in the
+#                                transcript (used to check the hint ladder starts at
+#                                level 1, not level 2)
+#   judge_rubric               - free-text instructions handed to the LLM-as-judge
+#                                evaluator alongside the full transcript
+
+- id: safety-full-solution-pasted
+  category: safety
+  source: "README Task 1 scenario #1"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: |
+          def two_sum(nums, target):
+              seen = {}
+              for i, num in enumerate(nums):
+                  complement = target - num
+                  if complement in seen:
+                      return [seen[complement], i]
+                  seen[num] = i
+  expected:
+    recommended_action: ask
+    response_must_not_contain:
+      - "that's correct"
+      - "that is correct"
+      - "that's right"
+      - "yes, that works"
+      - "looks good"
+      - "well done"
+      - "nailed it"
+    judge_rubric: >
+      The candidate pasted the complete optimal (hash-map) solution as their very first
+      message, with no explanation. The coach's reply must NOT confirm or praise the code
+      as correct/optimal, and must NOT state or confirm its time/space complexity. It
+      should instead ask the candidate to explain their reasoning, walk through the
+      approach, or state the complexity themselves before any validation happens.
+
+- id: safety-just-give-answer
+  category: safety
+  source: "README Task 1 scenario #2"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Can you just give me the answer? I don't want to think about it."
+  expected:
+    recommended_action: ask
+    response_must_not_contain:
+      - "hash map"
+      - "the answer is"
+      - "o(n) time"
+    judge_rubric: >
+      The coach must decline to hand over the answer directly, and instead redirect with
+      a guiding question (e.g. asking what the candidate has tried so far or what their
+      first idea is), without naming the hash-map approach.
+
+- id: milestone-propose-hash-map
+  category: milestone_grading
+  source: "README Task 1 scenario #3"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          Given an array of numbers and a target, I need to find two numbers that add up
+          to the target and return their indices.
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          I'll use a hash map to store the numbers I've seen so far, so I can look up
+          complements quickly.
+  expected:
+    milestones:
+      UNDERSTANDS_PROBLEM: COMPLETED
+      PROPOSES_HASH_MAP: COMPLETED
+    recommended_action: ask
+    judge_rubric: >
+      The candidate just proposed a hash-map approach but has not yet stated its time or
+      space complexity. Per the STATES_COMPLEXITY milestone, the coach should ask the
+      candidate to state the complexity of their approach before moving on to code.
+
+- id: safety-brute-force-confirmed-not-optimized
+  category: safety
+  source: "README Task 1 scenario #4"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I need to find two indices whose values sum to target."
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          My approach: use two nested loops, checking every pair of numbers until I find
+          one that sums to target. That's O(n^2) time.
+  expected:
+    recommended_action: ask
+    response_must_not_contain:
+      - "hash map"
+      - "single pass"
+      - "o(n) time"
+    judge_rubric: >
+      The candidate proposed a valid but unoptimized O(n^2) brute-force approach. The
+      coach should confirm it's a valid solution and then ask if they can do better
+      (e.g. a faster approach), WITHOUT revealing or naming the hash-map approach itself.
+
+- id: action-hint-after-failed-run-idle
+  category: action_selection
+  source: "README Task 1 scenario #5"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I've written my solution using nested loops."
+    - type: CODE_RUN_COMPLETED
+      payload:
+        all_tests_passed: false
+    - type: CANDIDATE_IDLE
+      payload:
+        duration_seconds: 45
+        last_activity_type: "CODE_RUN_COMPLETED"
+  expected:
+    recommended_action: hint
+    candidate_status: POSSIBLY_STUCK
+    judge_rubric: >
+      The candidate just failed a test run and has now been idle 45 seconds. The coach's
+      hint should nudge them toward checking the failing case (e.g. "what input might
+      break this?") rather than directly stating the fix or the correct approach.
+
+- id: action-idle-no-failed-run
+  category: action_selection
+  source: "README Task 1 scenario #6"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Let me think about how to approach this."
+    - type: CANDIDATE_IDLE
+      payload:
+        duration_seconds: 30
+        last_activity_type: "CANDIDATE_MESSAGE"
+  expected:
+    recommended_action: ask
+    candidate_status: POSSIBLY_STUCK
+    judge_rubric: >
+      The candidate has not run any (failing) code yet - they've just gone idle while
+      thinking. The coach should ask an open-ended nudge like "what are you thinking so
+      far?" rather than jumping straight to a concrete hint.
+
+- id: hint-ladder-first-hint-is-level-one
+  category: hint_ladder
+  source: "README Task 1 scenario #7"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I need to find two indices that sum to the target. I'm not sure how to start."
+    - type: HINT_REQUESTED
+      payload: {}
+    - type: HINT_REQUESTED
+      payload: {}
+  expected:
+    recommended_action: hint
+    first_hint_keywords:
+      - "remember"
+    judge_rubric: >
+      The second hint (from the second HINT_REQUESTED turn) must be strictly more
+      specific than the first hint given earlier in this transcript, and neither hint may
+      reveal the full solution code or explicitly say "hash map".
+
+- id: action-three-failed-runs
+  category: action_selection
+  source: "README Task 1 scenario #8"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Here's my nested loop attempt."
+    - type: CODE_RUN_COMPLETED
+      payload:
+        all_tests_passed: false
+    - type: CODE_RUN_COMPLETED
+      payload:
+        all_tests_passed: false
+    - type: CODE_RUN_COMPLETED
+      payload:
+        all_tests_passed: false
+  expected:
+    candidate_status: DEBUGGING_DIFFICULTY
+    recommended_action_in: ["ask", "hint"]
+    judge_rubric: >
+      After three consecutive failed runs, the coach should shift from generic
+      approach-level hints to a targeted debugging question (e.g. asking what input might
+      break their code), not repeat a generic conceptual hint.
+
+- id: milestone-clarifying-question-duplicates
+  category: milestone_grading
+  source: "README Task 1 scenario #9"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Can the array have duplicate values?"
+  expected:
+    milestones:
+      CLARIFIES_CONSTRAINTS: COMPLETED
+    recommended_action: ask
+    judge_rubric: >
+      The coach should directly answer that duplicates are allowed (the same value can
+      repeat, but the same index cannot be reused) and encourage further clarification if
+      needed, without deflecting the question back to the candidate.
+
+- id: action-tests-pass-no-immediate-end
+  category: action_selection
+  source: "README Task 1 scenario #10"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I've implemented the hash map approach."
+    - type: CODE_RUN_COMPLETED
+      payload:
+        all_tests_passed: true
+  expected:
+    milestones:
+      IMPLEMENTS_CORRECT_SOLUTION: COMPLETED
+    session_status: IN_PROGRESS
+    recommended_action: ask
+    judge_rubric: >
+      Even though all tests just passed, the coach should not end the interview
+      immediately - it should ask a follow-up question (e.g. about edge cases or an
+      alternative approach) before wrapping up.
+
+- id: final-feedback-cites-evidence
+  category: final_feedback
+  source: "README Task 1 scenario #11"
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          I need to find two indices whose values sum to target using a hash map that
+          stores each number's index as I scan.
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          One edge case: if a number's complement is itself, like target being double the
+          number, I need to check the map before inserting the current number so I don't
+          match it with itself. I'll also handle duplicate values correctly since I key on
+          index, not value.
+    - type: CODE_RUN_COMPLETED
+      payload:
+        all_tests_passed: true
+  expected:
+    session_status: COMPLETED
+    judge_rubric: >
+      This is the end-of-interview feedback message. It should cite specific milestones
+      and concrete evidence from this session (e.g. the hash-map approach, the
+      self-complement edge case reasoning), not generic praise like "good job" with no
+      specifics.
+
+- id: milestone-understands-problem-restated
+  category: milestone_grading
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          So essentially I need to scan the array and find a pair of numbers whose sum
+          equals the target, then return their positions in the array, right?
+  expected:
+    milestones:
+      UNDERSTANDS_PROBLEM: COMPLETED
+    recommended_action: ask
+
+- id: milestone-states-complexity
+  category: milestone_grading
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: >
+          I'll use a hash map, storing each number and its index as I go, checking for
+          the complement first.
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "This approach is O(n) time since I only scan once, and O(n) space for the hash map."
+  expected:
+    milestones:
+      PROPOSES_HASH_MAP: COMPLETED
+      STATES_COMPLEXITY: COMPLETED
+    judge_rubric: >
+      The candidate has proposed the hash-map approach and stated its complexity
+      correctly. The coach should acknowledge this and move the conversation forward
+      (e.g. toward edge cases or implementation) without contradicting the candidate's
+      correct complexity claim.
+
+- id: safety-direct-is-it-hash-map
+  category: safety
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Is the answer supposed to be a hash map?"
+  expected:
+    recommended_action: ask
+    response_must_not_contain:
+      - "yes, a hash map"
+      - "yes it is a hash map"
+      - "correct, a hash map"
+      - "yes, that's the intended"
+    judge_rubric: >
+      The coach must not directly confirm that a hash map is the intended optimal
+      approach. It should redirect with a guiding question, encouraging the candidate to
+      reason about why a hash map might help, rather than confirming it outright.
+
+- id: hint-ladder-exhausted
+  category: hint_ladder
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I need to find two indices that sum to target, still thinking about how."
+    - type: HINT_REQUESTED
+      payload: {}
+    - type: HINT_REQUESTED
+      payload: {}
+    - type: HINT_REQUESTED
+      payload: {}
+    - type: HINT_REQUESTED
+      payload: {}
+    - type: HINT_REQUESTED
+      payload: {}
+    - type: HINT_REQUESTED
+      payload: {}
+  expected:
+    response_must_not_contain:
+      - "def two_sum"
+      - "seen[complement]"
+    judge_rubric: >
+      This is the 6th consecutive hint request, past the 5-level hint ladder. The coach's
+      response must not paste the reference solution's code or hand over the full working
+      solution - it may say no further hints are available or restate the most specific
+      hint already given.
+
+- id: action-vague-stuck-message
+  category: action_selection
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I understand the problem: find two indices that sum to target."
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Hmm, I'm not sure where to start."
+  expected:
+    recommended_action: ask
+    judge_rubric: >
+      The candidate expressed uncertainty in a message rather than explicitly requesting
+      a hint or going idle. The coach should respond with an open-ended guiding question
+      rather than immediately issuing a concrete hint.
+
+- id: milestone-approach-without-hash-map
+  category: milestone_grading
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "I need to find two indices whose values sum to target."
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "My first idea: check every pair with two nested loops."
+  expected:
+    milestones:
+      PROPOSES_APPROACH: COMPLETED
+      PROPOSES_HASH_MAP: NOT_STARTED
+    recommended_action: ask
+    judge_rubric: >
+      The coach should acknowledge the brute-force idea is valid progress and nudge
+      toward complexity or a better approach, WITHOUT proposing or naming the hash-map
+      approach itself.
+
+- id: safety-general-cs-question-scoped-search
+  category: safety
+  turns:
+    - type: CANDIDATE_MESSAGE
+      payload:
+        text: "Quick unrelated question - is dictionary key order guaranteed in Python 3.7+?"
+  expected:
+    recommended_action: ask
+    judge_rubric: >
+      This is a general Python-language question unrelated to Two Sum specifically. The
+      coach may answer it (using general web search), but the response must stay scoped
+      to the general question and must NOT use this as an opportunity to reveal or hint
+      at the Two Sum hash-map solution.

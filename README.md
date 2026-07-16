@@ -378,3 +378,142 @@ solution-shaped queries.
 Default chunking is **one chunk per structural unit** — one hint per chunk, one edge case per chunk, one milestone definition per chunk, one reference solution per chunk — rather than fixed-size token windows.
 
 Why: the corpus is small and hand-authored (not long-form prose), and retrieval needs are precise — a query like "candidate asked about duplicates" needs exactly the duplicates edge case, not a sliding window that also drags in unrelated hint or rubric text. Chunking along the existing structural boundaries means every retrieved chunk is independently coherent and attributable, which also matters for the RAGAS faithfulness/context-precision metrics from Task 5 — it's much easier to judge whether a hint is "grounded in the retrieved context" when that context is exactly one edge case or one hint level, not an arbitrary token-count slice that mixes several.
+
+## Task 5: Evals
+
+Per the stack decisions in `CLAUDE.md`, this task uses two complementary harnesses rather than
+one: **RAGAS** for the retriever (a well-defined retrieval-quality problem RAGAS is built for),
+and **LLM-as-judge via LangSmith Datasets/Evaluators** for the coaching graph's actual turn-by-turn
+behavior — RAGAS has no concept of "did the coach withhold the solution" or "was the hint
+appropriately scaled," which are exactly the failure modes that matter most for this product.
+
+All code lives in `agent/evals/`. Both harnesses were run for real against the live agent (Claude
+Sonnet 5 for the agent's own calls, `gpt-4o-mini` as a cheap synthesis/judge model inside the RAGAS
+harness) — the numbers below are actual output, not projected.
+
+### Test dataset
+
+- **`agent/evals/dataset.yaml`** — 18 behavioral scenarios, expanding the 11 scenario pairs in
+  Task 1's table (each still cross-referenced by `source`) with 7 new ones targeting milestone
+  grading, hint-ladder edges, and safety. Each example is a sequence of `InterviewEvent`s (the
+  same shape `try_graph.py` replays) plus an `expected` block that can assert, per example, any
+  mix of: exact `recommended_action`/`candidate_status`/`session_status`, milestone-id → status
+  pairs, banned substrings the coach's reply must never contain, keyword checks on the *first*
+  hint given, and a free-text `judge_rubric` for the LLM judge. YAML was chosen over JSONL so the
+  multi-line rubric/turn text stays readable and diffable.
+- **`agent/evals/retrieval_dataset.yaml`** — 12 queries against `retrieve_problem_context`, one
+  per `doc_type` (`base_question`, `clarification`, `example_test_cases`, `constraints`,
+  `edge_case`, `reference_solution`, `milestone`) plus one adversarial no-filter query
+  ("what's a good hint for two sum?") that specifically re-probes the known hint-vs-solution
+  ranking issue documented in `retriever.py`'s module docstring. Each entry carries a
+  hand-written `reference` answer grounded in the knowledge-base YAML, used by RAGAS's
+  context-precision/recall metrics.
+
+Retrieval-quality coverage of the golden set (deliverable 1's "does retrieval surface the right
+doc_type" requirement) is handled by `retrieval_dataset.yaml` rather than duplicated into
+`dataset.yaml` — a deliberate split so each dataset stays scoped to the harness that consumes it.
+
+### Evaluation harness
+
+- **`agent/evals/run_ragas_eval.py`** — calls a new `retrieve_context_documents()` helper
+  (factored out of `retriever.py`'s tool function so the harness can inspect individual chunks
+  and `doc_type`s instead of the tool's joined string) for each query, has `gpt-4o-mini` answer
+  the query using *only* the retrieved chunks, then scores `(query, retrieved_contexts, answer,
+  reference)` with RAGAS's `Faithfulness`, `LLMContextPrecisionWithReference`, and
+  `LLMContextRecall`. A cheap deterministic top-1 `doc_type` check runs alongside it, independent
+  of any LLM.
+- **`agent/evals/run_langsmith_eval.py`** — uploads `dataset.yaml` to a LangSmith dataset
+  (`swell-two-sum-coach-eval`), then for each example replays its event sequence through a fresh
+  `build_graph(checkpointer=InMemorySaver())` instance (one thread per example) via the `langsmith`
+  SDK's `evaluate()`. Four evaluators run per example: `deterministic_state_match` (exact-match
+  checks on the fields above), `safety_no_leak` (banned-substring check), `hint_ladder_level_one`
+  (keyword check on the first hint), and `llm_judge_rubric` — a Claude Sonnet 5 call with
+  structured output (`passed: bool`, `reasoning: str`) that grades the full transcript against
+  the example's `judge_rubric`. Each example only runs the evaluators relevant to it (most return
+  `score=None`/"n/a" when their field isn't configured for that example).
+
+One judgment call worth flagging: `ragas==0.2.15`'s `ragas/llms/base.py` unconditionally imports
+`langchain_community.chat_models.vertexai`, which no longer exists in the `langchain-community`
+version the rest of the agent's dependencies require (older `langchain-community` pins an older
+`langsmith`/`langchain-core` that conflicts with `langgraph`/`langchain-anthropic`). Rather than
+fighting that resolver conflict, `agent/evals/_ragas_compat.py` stubs the missing submodule in
+`sys.modules` before `ragas` imports it — VertexAI is never actually used anywhere in this project.
+
+### Results and conclusions
+
+**Retrieval (RAGAS)** — strong across the board: **11/12** queries returned the expected
+`doc_type` as their top-1 result (mean scores: faithfulness **0.956**, context precision
+**0.917**, context recall **0.917**). The one deterministic miss, `edge-case-duplicates`
+("can the array have duplicate values?", unfiltered), ranked the `clarification` chunk above the
+`edge_case` chunk — both directly answer the question, so this is a minor ranking nuance rather
+than a wrong answer, but it does mean an agent call that omits the `doc_type` filter can get the
+shallower clarification instead of the deeper edge-case reasoning. The adversarial hint-style
+query correctly surfaced no hint content (there is none in the corpus) but, as `retriever.py`'s
+docstring already documents, ranked a reference solution's code above everything else when
+unfiltered — the RAGAS run reproduces that exact known behavior with real numbers (context
+precision/recall both `0.0` for that one row) rather than just asserting it, which is exactly why
+`hints.py` bypasses vector search entirely for hint lookups.
+
+**Behavior (LangSmith/LLM-as-judge)** — mean `deterministic_state_match` **0.647** (11/17
+applicable examples), `llm_judge_rubric` **0.529** (9/17), `safety_no_leak` **1.0** (5/5, with an
+important caveat below), `hint_ladder_level_one` **0.0** (0/1). Concrete failure modes the harness
+surfaced:
+
+1. **`generate_feedback` crashes on the most natural end-of-interview path.** The
+   `final-feedback-cites-evidence` example (README scenario #11) threw
+   `anthropic.BadRequestError: This model does not support assistant message prefill` — when the
+   triggering event that completes both milestones is a `CODE_RUN_COMPLETED` (no candidate
+   message), `state["messages"]` still ends on the coach's *previous* turn, so
+   `generate_feedback`'s prompt (`[SystemMessage, *state["messages"]]`) ends on an assistant
+   message, which the Anthropic API rejects outright. This is a hard crash, not a quality issue,
+   and it hits on the single most common way an interview actually ends. Highest-priority fix
+   candidate for Task 6.
+2. **The hint ladder has a confirmed off-by-one.** `hint_ladder_first-hint-is-level-one` failed
+   its keyword check and manual inspection confirms it: `apply_deterministic_rules` increments
+   `hint_level` to `1` on the *first* `HINT_REQUESTED`, then `respond` calls
+   `get_next_hint(hint_level=1)`, which looks up level `hint_level + 1 = 2`. The level-1 hint in
+   `hints.yaml` ("think about what you'd need to remember...") is never shown to any candidate —
+   every session's first hint is already the level-2 hint. The LLM judge separately flagged that
+   hints 1 and 2 read as similar specificity, which is a downstream symptom of the same bug
+   (levels 2→3 are conceptually closer together than 1→2 would have been).
+3. **A real solution leak the deterministic safety check missed.** For the pasted-full-solution
+   scenario (#1), the coach opened with *"That looks like a solid one-pass hash map solution."*
+   `safety_no_leak`'s substring list (`"looks good"`, `"that's correct"`, etc.) didn't happen to
+   include "looks solid" and passed it; `llm_judge_rubric` correctly failed it for confirming
+   correctness before the candidate explained anything. This is the strongest evidence in this
+   eval run for why the LLM-judge harness exists alongside RAGAS/deterministic checks — a
+   hand-maintained banned-word list is inherently incomplete for open-ended praise phrasing.
+4. **`recommended_action` selection is the noisiest part of the pipeline.** Most
+   `deterministic_state_match` failures were `recommended_action` mismatches, and they cluster in
+   two directions: the coach jumps to a concrete `hint` for messages that should get an open
+   `ask` (e.g. "Is the answer supposed to be a hash map?", a vague "I'm not sure where to start"),
+   and it picks `wait` (producing literally no new message) where scenario #6 and #10 expect an
+   `ask` — most notably, after all tests pass, `action-tests-pass-no-immediate-end` shows the
+   coach *not* asking the expected edge-case/alternative-approach follow-up. Separately, an
+   earlier `try_graph.py` smoke-test surfaced the same class of issue from a different angle: a
+   single `HINT_REQUESTED` event escalated `candidate_status` all the way to
+   `DEBUGGING_DIFFICULTY`, a status `state.py` defines as meaning 3+ failed runs — `evaluate`'s
+   own judgment can currently overshoot the deterministic floor it's supposed to only ever
+   escalate cautiously above.
+5. **Milestone grading itself was mostly reliable when checked** — `UNDERSTANDS_PROBLEM`,
+   `CLARIFIES_CONSTRAINTS`, `PROPOSES_APPROACH`, `PROPOSES_HASH_MAP` all graded correctly in their
+   respective scenarios. One miss: after the candidate proposed the hash-map approach,
+   `milestone-propose-hash-map`'s coach moved straight into implementation questions (what's the
+   key/value) without ever asking for time/space complexity, skipping `STATES_COMPLEXITY` — the
+   rubric-gating between "propose an approach" and "let them start implementing" (scenario #3) is
+   not consistently enforced.
+
+**Net read**: the RAG leg of the pipeline (retrieval + grounding) is in good shape and the
+knowledge base's chunking strategy is paying off in the RAGAS numbers. The weaker leg is the
+`evaluate` node's `recommended_action`/`candidate_status` judgment calls and one deterministic
+off-by-one in the hint ladder — plus one outright crash bug in `generate_feedback`. All of this
+gives Task 6 concrete, evidence-backed starting points rather than guesses about what to improve.
+
+Judgment calls made while building this harness (flagged for visibility, not blocking): RAGAS's
+synthesis/judge model is `gpt-4o-mini` rather than a larger model, purely for cost/speed at this
+dataset size — worth upgrading if RAGAS scores become the deciding metric for Task 6. The 18/12
+example counts are within the originally-scoped ~15-20 range rather than exhaustive; categories
+were chosen to cover every scenario in Task 1's table plus the milestone/hint/safety gaps called
+out in this task's brief, not to be a complete state-space sweep. Full raw output (per-example
+scores + judge reasoning) is saved under `agent/evals/results/` for anyone who wants to check a
+specific verdict rather than the rollup above.

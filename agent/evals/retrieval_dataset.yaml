@@ -1,0 +1,116 @@
+# RAGAS retrieval-quality eval set for swell_agent.retriever.retrieve_problem_context
+# (Task 5, deliverable 2). Covers all 7 doc_types in the knowledge base plus one
+# adversarial query (the known "hint" query - see retriever.py's module docstring)
+# to confirm hints never leak through the vector retriever.
+#
+# Fields:
+#   id          - short identifier
+#   query       - the query passed to retrieve_context_documents
+#   doc_type    - the doc_type filter to apply (null = no filter, search all types)
+#   expected_doc_type - the doc_type we expect the top-ranked chunk to have, used for
+#                        a cheap deterministic top-1 check independent of RAGAS. null
+#                        means "no single type is 'correct' - just confirm hints don't
+#                        leak in".
+#   reference   - hand-written ground-truth answer to the query, grounded in the
+#                 knowledge-base YAML. Used by RAGAS context_precision/context_recall
+#                 (how well the retrieved chunks cover this reference) and as the
+#                 target the synthesis LLM is scored against for faithfulness.
+
+- id: edge-case-duplicates
+  query: "can the array have duplicate values?"
+  doc_type: null
+  expected_doc_type: edge_case
+  reference: >
+    Yes, the array may contain duplicate values. The same value can appear more than
+    once, but the same index cannot be used twice - the solution should key on index,
+    not value.
+
+- id: reference-solution-complexity
+  query: "what's the time complexity of the hash map approach?"
+  doc_type: reference_solution
+  expected_doc_type: reference_solution
+  reference: >
+    The hash-map approach runs in O(n) time and O(n) space: it scans the array once,
+    checking for each number's complement in a hash map before inserting the number.
+
+- id: milestone-understands-problem
+  query: "what counts as understanding the problem?"
+  doc_type: milestone
+  expected_doc_type: milestone
+  reference: >
+    The candidate restates the goal - finding two indices whose values sum to the
+    target - in their own words.
+
+- id: example-test-cases
+  query: "are there example inputs and outputs for this problem?"
+  doc_type: example_test_cases
+  expected_doc_type: example_test_cases
+  reference: >
+    Example: nums = [2,7,11,15], target = 9 returns [0,1] since nums[0] + nums[1] == 9.
+    Another: nums = [3,2,4], target = 6 returns [1,2]. A third with duplicates:
+    nums = [3,3], target = 6 returns [0,1].
+
+- id: constraints-array-size
+  query: "what are the constraints on array size and the values?"
+  doc_type: constraints
+  expected_doc_type: constraints
+  reference: >
+    The array length is between 2 and 10^4, each value and the target are between
+    -10^9 and 10^9, and exactly one valid answer is guaranteed to exist.
+
+- id: clarification-reuse-element
+  query: "can I use the same element twice?"
+  doc_type: clarification
+  expected_doc_type: clarification
+  reference: >
+    No, each element may only be used once - the two returned indices must be
+    different.
+
+- id: base-question-statement
+  query: "what is the two sum problem asking me to do?"
+  doc_type: base_question
+  expected_doc_type: base_question
+  reference: >
+    Given an array of integers and a target, return the indices of the two numbers
+    that add up to the target, assuming exactly one solution exists and not reusing
+    the same element twice.
+
+- id: edge-case-self-complement
+  query: "what happens if a number's complement is itself?"
+  doc_type: edge_case
+  expected_doc_type: edge_case
+  reference: >
+    If a number's complement equals itself (target is double the current number), the
+    solution must check the hash map for the complement BEFORE inserting the current
+    number, or it will incorrectly match the element with itself.
+
+- id: milestone-handles-edge-cases
+  query: "what criteria mark the candidate as having handled edge cases?"
+  doc_type: milestone
+  expected_doc_type: milestone
+  reference: >
+    The candidate reasons about at least one edge case (duplicates, negatives, or
+    self-match), either proactively or in response to a coach prompt.
+
+- id: reference-solution-brute-force
+  query: "what's the brute force approach and its complexity?"
+  doc_type: reference_solution
+  expected_doc_type: reference_solution
+  reference: >
+    The brute-force approach checks every pair of numbers with two nested loops,
+    running in O(n^2) time and O(1) space.
+
+- id: clarification-sorted-array
+  query: "is the input array sorted?"
+  doc_type: clarification
+  expected_doc_type: clarification
+  reference: "No, the candidate should not assume the array is sorted."
+
+- id: adversarial-hint-query-no-filter
+  query: "what's a good hint for two sum?"
+  doc_type: null
+  expected_doc_type: null
+  reference: >
+    Hints are intentionally not part of this retriever's corpus - retrieve_problem_context
+    must never surface hint text (that's get_next_hint's job instead), so no doc_type is
+    "correct" here as long as no hint content is returned.

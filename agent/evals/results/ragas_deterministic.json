@@ -1,0 +1,145 @@
+[
+  {
+    "id": "edge-case-duplicates",
+    "query": "can the array have duplicate values?",
+    "expected_doc_type": "edge_case",
+    "top1_doc_type": "clarification",
+    "retrieved_doc_types": [
+      "clarification",
+      "edge_case",
+      "clarification",
+      "clarification"
+    ],
+    "top1_match": false
+  },
+  {
+    "id": "reference-solution-complexity",
+    "query": "what's the time complexity of the hash map approach?",
+    "expected_doc_type": "reference_solution",
+    "top1_doc_type": "reference_solution",
+    "retrieved_doc_types": [
+      "reference_solution",
+      "reference_solution"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "milestone-understands-problem",
+    "query": "what counts as understanding the problem?",
+    "expected_doc_type": "milestone",
+    "top1_doc_type": "milestone",
+    "retrieved_doc_types": [
+      "milestone",
+      "milestone",
+      "milestone",
+      "milestone"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "example-test-cases",
+    "query": "are there example inputs and outputs for this problem?",
+    "expected_doc_type": "example_test_cases",
+    "top1_doc_type": "example_test_cases",
+    "retrieved_doc_types": [
+      "example_test_cases"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "constraints-array-size",
+    "query": "what are the constraints on array size and the values?",
+    "expected_doc_type": "constraints",
+    "top1_doc_type": "constraints",
+    "retrieved_doc_types": [
+      "constraints"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "clarification-reuse-element",
+    "query": "can I use the same element twice?",
+    "expected_doc_type": "clarification",
+    "top1_doc_type": "clarification",
+    "retrieved_doc_types": [
+      "clarification",
+      "clarification",
+      "clarification",
+      "clarification"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "base-question-statement",
+    "query": "what is the two sum problem asking me to do?",
+    "expected_doc_type": "base_question",
+    "top1_doc_type": "base_question",
+    "retrieved_doc_types": [
+      "base_question"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "edge-case-self-complement",
+    "query": "what happens if a number's complement is itself?",
+    "expected_doc_type": "edge_case",
+    "top1_doc_type": "edge_case",
+    "retrieved_doc_types": [
+      "edge_case",
+      "edge_case",
+      "edge_case",
+      "edge_case"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "milestone-handles-edge-cases",
+    "query": "what criteria mark the candidate as having handled edge cases?",
+    "expected_doc_type": "milestone",
+    "top1_doc_type": "milestone",
+    "retrieved_doc_types": [
+      "milestone",
+      "milestone",
+      "milestone",
+      "milestone"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "reference-solution-brute-force",
+    "query": "what's the brute force approach and its complexity?",
+    "expected_doc_type": "reference_solution",
+    "top1_doc_type": "reference_solution",
+    "retrieved_doc_types": [
+      "reference_solution",
+      "reference_solution"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "clarification-sorted-array",
+    "query": "is the input array sorted?",
+    "expected_doc_type": "clarification",
+    "top1_doc_type": "clarification",
+    "retrieved_doc_types": [
+      "clarification",
+      "clarification",
+      "clarification",
+      "clarification"
+    ],
+    "top1_match": true
+  },
+  {
+    "id": "adversarial-hint-query-no-filter",
+    "query": "what's a good hint for two sum?",
+    "expected_doc_type": null,
+    "top1_doc_type": "reference_solution",
+    "retrieved_doc_types": [
+      "reference_solution",
+      "reference_solution",
+      "milestone",
+      "example_test_cases"
+    ],
+    "top1_match": true
+  }
+]

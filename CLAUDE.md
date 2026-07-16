@@ -53,8 +53,8 @@ document that answers all of them in order. Current state:
 | 1 | Problem, audience, scope (workflow diagram, eval questions) | Done |
 | 2 | Proposed solution (infra diagram, agent workflow diagram, state model) | Done |
 | 3 | Data strategy (chunking, external API/data sources) | Done |
-| 4 | End-to-end prototype + deployment | In progress — `fe/` (Next.js, with LLM gateway route) and the agent (LangGraph graph + tools) are built; agent is deployed to LangGraph Platform; chat UI in `fe/` and Vercel deployment still needed |
-| 5 | Evals (test set + harness + conclusions) | In progress |
+| 4 | End-to-end prototype + deployment | Done — agent deployed to LangGraph Platform, `fe/` (chat UI + LLM gateway) deployed to Vercel (`tryswell.vercel.app`); 4 known bugs open (see `agent/evals/FINDINGS.md` / GitHub issues #1-#4) |
+| 5 | Evals (test set + harness + conclusions) | Done — see `agent/evals/` (dataset, RAGAS harness, LangSmith LLM-as-judge harness) and Task 5 in `README.md` |
 | 6 | Advanced retrieval + one more improvement, with before/after comparison | Not started |
 | 7 | Next steps / Demo Day reflection | Not started |
 

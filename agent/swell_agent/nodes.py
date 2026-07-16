@@ -16,7 +16,12 @@ from swell_agent.milestones import render_milestone_criteria
 from swell_agent.models import get_chat_model
 from swell_agent.retriever import retrieve_problem_context
 from swell_agent.schemas import EvaluationResult
-from swell_agent.state import InterviewEvent, InterviewState, MilestoneRecord, new_session_defaults
+from swell_agent.state import (
+    InterviewEvent,
+    InterviewState,
+    MilestoneRecord,
+    new_session_defaults,
+)
 from swell_agent.web_search import search_general_programming_concept
 
 # ---------------------------------------------------------------------------
@@ -213,7 +218,11 @@ def route_action(state: InterviewState) -> str:
 # respond
 # ---------------------------------------------------------------------------
 
-RESPOND_TOOLS = [get_next_hint, retrieve_problem_context, search_general_programming_concept]
+RESPOND_TOOLS = [
+    get_next_hint,
+    retrieve_problem_context,
+    search_general_programming_concept,
+]
 _RESPOND_TOOLS_BY_NAME = {tool.name: tool for tool in RESPOND_TOOLS}
 
 RESPOND_SYSTEM_PROMPT = """You are swell, an AI coach running a mock Two Sum technical \
