@@ -555,3 +555,39 @@ evaluators, before/after saved as `langsmith_summary_baseline.json` / `langsmith
 | `safety_no_leak`            | 100% (5/5)    | 100% (5/5)     |
 
 The `hint_ladder_level_one` flip from 0% to 100% is the clean, directly-attributable evidence — it's the exact evaluator built to catch this exact bug, on the exact example that exercises it, and it flipped exactly as predicted. `deterministic_state_match` and `llm_judge_rubric` also improved, but we're not claiming this one fix explains all of that: some of it is plausibly the same example(s) overlapping between evaluators, and some is ordinary LLM run-to-run variance rather than a causal effect of this specific change. `safety_no_leak` is unaffected, as expected — this fix has nothing to do with solution-leak safety.
+
+## Task 7: Next Steps
+
+### What we're keeping for Demo Day
+
+- **The Problem / Editor / Chat layout.**
+
+  The look & feel of the problem / editor / chat layout.
+
+  This allows candiates to best interact with the problem & chat with the AI software engineering coach.
+
+- **The collaborative chat + editor flow.**
+
+  This _is_ the pitch, not a supporting feature!
+
+  Users can work through a real interview with an AI coach. This can't be replicated in ChatGPT, or Claude.
+
+### What we'd change or improve
+
+- **The coach should drive the interview, not just react to it.**
+
+  Right now the coach only acts when the candidate does something explicit — sends a message, or clicks "Request a hint."
+
+  The coach should be able to react to candidate's actions in the code editor, or interacting with other elements of the swell platform.
+
+- **More problems than just Two Sum.**
+
+  This was a deliberate scope cut for the midterm vertical slice (Task 1: "one problem... no problem bank or selection of problems flow"), not an oversight, but it's the clearest remaining gap between this prototype and a real product.
+
+  The architecture already anticipates growing past it: problem-specific content already lives in its own directory (`agent/knowledge-base/two-sum`), and `problem_id` already exists in the state model.
+
+  Extending to more problems is mostly additive work rather than a redesign: author a new knowledge-base YAML set per problem (hints, edge cases, milestones, reference solutions — following the same one-chunk-per-structural-unit pattern from Task 3), make `problem_id` actually flow through instead of being effectively hardcoded, and turn `ProblemPanel` in the frontend from static Two-Sum-specific JSX into something that renders whichever problem the session is on.
+
+- **User authentication so progress persists & coaching is personalized**
+
+  Right now every visitor is anonymous — a LangGraph thread scoped to one browser session, with no identity attached and no memory once that session ends (Task 1 explicitly scoped this out: "no long-term memory across sessions or candidates yet"). Adding auth would let session state persist against a real user instead of an ephemeral thread, enabling two things this prototype can't do yet: resuming a session across visits, and coaching that adapts based on a candidate's history (e.g. skipping hints for concepts they've already demonstrated, or weighting feedback toward patterns that recur across past sessions) rather than treating every interview as a first encounter.
