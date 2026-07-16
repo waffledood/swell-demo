@@ -19,6 +19,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "ragas==0.2.15",
     "langsmith>=0.10.2",
+    "cohere>=7.0.5",
 ]
 
 [build-system]

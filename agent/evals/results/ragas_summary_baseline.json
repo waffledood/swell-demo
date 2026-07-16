@@ -1,8 +1,8 @@
 {
-  "reranked": true,
+  "reranked": false,
   "top1_doc_type_match": "11/12",
   "mean_scores": {
-    "faithfulness": 0.9166666666666666,
+    "faithfulness": 0.9833333333333334,
     "llm_context_precision_with_reference": 0.9166666665791666,
     "context_recall": 0.875
   }

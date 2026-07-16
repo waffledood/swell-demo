@@ -4,8 +4,8 @@
     "retrieved_contexts":[
       "Q: Can the array contain duplicate values?\nA: Yes, the array may contain duplicate values. The same value can appear more than once, but the same index cannot be used twice.\n",
       "duplicate_values: The array may contain duplicate values (e.g. [3,3] with target 6). Each value can repeat, but the same index cannot be reused - the candidate's solution should key on index, not just value.\n",
-      "CLARIFIES_CONSTRAINTS: Candidate asks at least one clarifying question (e.g. duplicates, negative numbers, array size) before proposing an approach.\n",
-      "Q: Can I use the same element twice?\nA: No, each element may only be used once. The two returned indices must be different.\n"
+      "Q: Can I use the same element twice?\nA: No, each element may only be used once. The two returned indices must be different.\n",
+      "Q: Is the array sorted?\nA: No, you should not assume the array is sorted."
     ],
     "response":"Yes, the array may contain duplicate values.",
     "reference":"Yes, the array may contain duplicate values. The same value can appear more than once, but the same index cannot be used twice - the solution should key on index, not value.\n",
@@ -30,8 +30,8 @@
     "retrieved_contexts":[
       "UNDERSTANDS_PROBLEM: Candidate restates the goal (find two indices whose values sum to target) in their own words.\n",
       "CLARIFIES_CONSTRAINTS: Candidate asks at least one clarifying question (e.g. duplicates, negative numbers, array size) before proposing an approach.\n",
-      "PROPOSES_APPROACH: Candidate verbally proposes an algorithmic approach, even brute-force, before writing code.\n",
-      "STATES_COMPLEXITY: Candidate states the time and space complexity of their proposed approach.\n"
+      "STATES_COMPLEXITY: Candidate states the time and space complexity of their proposed approach.\n",
+      "PROPOSES_APPROACH: Candidate verbally proposes an algorithmic approach, even brute-force, before writing code.\n"
     ],
     "response":"Understanding the problem counts as the candidate restating the goal (find two indices whose values sum to target) in their own words.",
     "reference":"The candidate restates the goal - finding two indices whose values sum to the target - in their own words.\n",
@@ -55,7 +55,7 @@
     "retrieved_contexts":[
       "- 2 <= nums.length <= 10^4\n- -10^9 <= nums[i] <= 10^9\n- -10^9 <= target <= 10^9\n- Only one valid answer exists."
     ],
-    "response":"The constraints on array size are that the length of the array, nums, must be between 2 and 10,000 (inclusive). The values in the array, nums[i], must be between -1,000,000,000 and 1,000,000,000 (inclusive). Additionally, the target value must also be between -1,000,000,000 and 1,000,000,000 (inclusive).",
+    "response":"The constraints on array size are that the length of the array, nums, must be between 2 and 10,000 (inclusive). The values within the array, nums[i], must be between -1,000,000,000 and 1,000,000,000 (inclusive). Additionally, the target value must also be between -1,000,000,000 and 1,000,000,000 (inclusive).",
     "reference":"The array length is between 2 and 10^4, each value and the target are between -10^9 and 10^9, and exactly one valid answer is guaranteed to exist.\n",
     "faithfulness":1.0,
     "llm_context_precision_with_reference":0.9999999999,
@@ -91,8 +91,8 @@
     "retrieved_contexts":[
       "complement_matches_self_before_stored: If a number's complement is itself (e.g. target is double the current number), the candidate's solution must check the hash map for the complement before inserting the current number, otherwise it will incorrectly match an element with itself.\n",
       "negative_numbers: The array may contain negative numbers and the target may be negative. The hash-map approach should handle this without special-casing, since it relies on arithmetic (target - number), not sign.\n",
-      "duplicate_values: The array may contain duplicate values (e.g. [3,3] with target 6). Each value can repeat, but the same index cannot be reused - the candidate's solution should key on index, not just value.\n",
-      "order_of_returned_indices: The problem does not require indices to be returned in any particular order, but the candidate should be able to state whether their solution guarantees an order and why.\n"
+      "order_of_returned_indices: The problem does not require indices to be returned in any particular order, but the candidate should be able to state whether their solution guarantees an order and why.\n",
+      "duplicate_values: The array may contain duplicate values (e.g. [3,3] with target 6). Each value can repeat, but the same index cannot be reused - the candidate's solution should key on index, not just value.\n"
     ],
     "response":"If a number's complement is itself (e.g. target is double the current number), the candidate's solution must check the hash map for the complement before inserting the current number, otherwise it will incorrectly match an element with itself.",
     "reference":"If a number's complement equals itself (target is double the current number), the solution must check the hash map for the complement BEFORE inserting the current number, or it will incorrectly match the element with itself.\n",
@@ -104,9 +104,9 @@
     "user_input":"what criteria mark the candidate as having handled edge cases?",
     "retrieved_contexts":[
       "HANDLES_EDGE_CASES: Candidate reasons about at least one edge case (duplicates, negatives, self-match) either proactively or in response to a coach prompt.\n",
-      "STATES_COMPLEXITY: Candidate states the time and space complexity of their proposed approach.\n",
       "CLARIFIES_CONSTRAINTS: Candidate asks at least one clarifying question (e.g. duplicates, negative numbers, array size) before proposing an approach.\n",
-      "IMPLEMENTS_CORRECT_SOLUTION: Candidate's code passes all test cases. Set deterministically from the CODE_RUN_COMPLETED event's all_tests_passed field, not inferred by the LLM.\n"
+      "IMPLEMENTS_CORRECT_SOLUTION: Candidate's code passes all test cases. Set deterministically from the CODE_RUN_COMPLETED event's all_tests_passed field, not inferred by the LLM.\n",
+      "PROPOSES_APPROACH: Candidate verbally proposes an algorithmic approach, even brute-force, before writing code.\n"
     ],
     "response":"The criteria that mark the candidate as having handled edge cases are that the candidate reasons about at least one edge case (such as duplicates, negatives, or self-match) either proactively or in response to a coach prompt.",
     "reference":"The candidate reasons about at least one edge case (duplicates, negatives, or self-match), either proactively or in response to a coach prompt.\n",
@@ -146,11 +146,11 @@
       "Approach: brute_force\nTime complexity: O(n^2)\nSpace complexity: O(1)\n\ndef two_sum(nums, target):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n",
       "Approach: hash_map\nTime complexity: O(n)\nSpace complexity: O(n)\n\ndef two_sum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return [seen[complement], i]\n        seen[num] = i\n",
       "UNDERSTANDS_PROBLEM: Candidate restates the goal (find two indices whose values sum to target) in their own words.\n",
-      "- 2 <= nums.length <= 10^4\n- -10^9 <= nums[i] <= 10^9\n- -10^9 <= target <= 10^9\n- Only one valid answer exists."
+      "Input: nums = [2,7,11,15], target = 9\nOutput: [0,1]\nExplanation: nums[0] + nums[1] == 9, so return [0, 1].\n\nInput: nums = [3,2,4], target = 6\nOutput: [1,2]\nExplanation: nums[1] + nums[2] == 6, so return [1, 2].\n\nInput: nums = [3,3], target = 6\nOutput: [0,1]\nExplanation: nums[0] + nums[1] == 6, so return [0, 1]."
     ],
-    "response":"The context does not contain a specific hint for the two sum problem.",
+    "response":"A good hint for two sum is to consider using a hash map to store the numbers you've seen so far and their indices, which allows you to quickly check if the complement of the current number (the number needed to reach the target) has already been encountered.",
     "reference":"Hints are intentionally not part of this retriever's corpus - retrieve_problem_context must never surface hint text (that's get_next_hint's job instead), so no doc_type is \"correct\" here as long as no hint content is returned.\n",
-    "faithfulness":0.0,
+    "faithfulness":0.8,
     "llm_context_precision_with_reference":0.0,
     "context_recall":0.0
   }

@@ -35,12 +35,16 @@ def _load_hints() -> list[dict]:
 def get_next_hint(
     hint_level: Annotated[int, "the candidate's current hint_level from session state"],
 ) -> str:
-    """Look up the next hint in the ladder - one level more specific than the
-    candidate's current hint_level. Deterministic lookup by level: never returns
-    the reference solution, and never skips ahead past the next level. Use this
-    instead of retrieve_problem_context whenever the candidate needs a hint."""
+    """Look up the hint at the candidate's current hint_level. apply_deterministic_rules
+    increments hint_level (in nodes.py) before this is called, so by the time this runs,
+    hint_level already IS the level to show - e.g. the first-ever HINT_REQUESTED bumps
+    hint_level from 0 to 1, and this looks up level 1 directly (previously looked up
+    hint_level + 1 = 2, silently skipping level 1 on every session's first hint).
+    Deterministic lookup by level: never returns the reference solution, and never
+    skips ahead. Use this instead of retrieve_problem_context whenever the candidate
+    needs a hint."""
     for hint in _load_hints():
-        if hint["level"] == hint_level + 1:
+        if hint["level"] == hint_level:
             return hint["text"]
     return "No further hints available - this is the most specific hint in the ladder."
 

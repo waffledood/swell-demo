@@ -398,7 +398,7 @@ harness) — the numbers below are actual output, not projected.
   grading, hint-ladder edges, and safety. Each example is a sequence of `InterviewEvent`s (the
   same shape `try_graph.py` replays) plus an `expected` block that can assert, per example, any
   mix of: exact `recommended_action`/`candidate_status`/`session_status`, milestone-id → status
-  pairs, banned substrings the coach's reply must never contain, keyword checks on the *first*
+  pairs, banned substrings the coach's reply must never contain, keyword checks on the _first_
   hint given, and a free-text `judge_rubric` for the LLM judge. YAML was chosen over JSONL so the
   multi-line rubric/turn text stays readable and diffable.
 - **`agent/evals/retrieval_dataset.yaml`** — 12 queries against `retrieve_problem_context`, one
@@ -418,8 +418,8 @@ doc_type" requirement) is handled by `retrieval_dataset.yaml` rather than duplic
 - **`agent/evals/run_ragas_eval.py`** — calls a new `retrieve_context_documents()` helper
   (factored out of `retriever.py`'s tool function so the harness can inspect individual chunks
   and `doc_type`s instead of the tool's joined string) for each query, has `gpt-4o-mini` answer
-  the query using *only* the retrieved chunks, then scores `(query, retrieved_contexts, answer,
-  reference)` with RAGAS's `Faithfulness`, `LLMContextPrecisionWithReference`, and
+  the query using _only_ the retrieved chunks, then scores `(query, retrieved_contexts, answer,
+reference)` with RAGAS's `Faithfulness`, `LLMContextPrecisionWithReference`, and
   `LLMContextRecall`. A cheap deterministic top-1 `doc_type` check runs alongside it, independent
   of any LLM.
 - **`agent/evals/run_langsmith_eval.py`** — uploads `dataset.yaml` to a LangSmith dataset
@@ -463,21 +463,21 @@ surfaced:
    `final-feedback-cites-evidence` example (README scenario #11) threw
    `anthropic.BadRequestError: This model does not support assistant message prefill` — when the
    triggering event that completes both milestones is a `CODE_RUN_COMPLETED` (no candidate
-   message), `state["messages"]` still ends on the coach's *previous* turn, so
+   message), `state["messages"]` still ends on the coach's _previous_ turn, so
    `generate_feedback`'s prompt (`[SystemMessage, *state["messages"]]`) ends on an assistant
    message, which the Anthropic API rejects outright. This is a hard crash, not a quality issue,
    and it hits on the single most common way an interview actually ends. Highest-priority fix
    candidate for Task 6.
 2. **The hint ladder has a confirmed off-by-one.** `hint_ladder_first-hint-is-level-one` failed
    its keyword check and manual inspection confirms it: `apply_deterministic_rules` increments
-   `hint_level` to `1` on the *first* `HINT_REQUESTED`, then `respond` calls
+   `hint_level` to `1` on the _first_ `HINT_REQUESTED`, then `respond` calls
    `get_next_hint(hint_level=1)`, which looks up level `hint_level + 1 = 2`. The level-1 hint in
    `hints.yaml` ("think about what you'd need to remember...") is never shown to any candidate —
    every session's first hint is already the level-2 hint. The LLM judge separately flagged that
    hints 1 and 2 read as similar specificity, which is a downstream symptom of the same bug
    (levels 2→3 are conceptually closer together than 1→2 would have been).
 3. **A real solution leak the deterministic safety check missed.** For the pasted-full-solution
-   scenario (#1), the coach opened with *"That looks like a solid one-pass hash map solution."*
+   scenario (#1), the coach opened with _"That looks like a solid one-pass hash map solution."_
    `safety_no_leak`'s substring list (`"looks good"`, `"that's correct"`, etc.) didn't happen to
    include "looks solid" and passed it; `llm_judge_rubric` correctly failed it for confirming
    correctness before the candidate explained anything. This is the strongest evidence in this
@@ -489,7 +489,7 @@ surfaced:
    `ask` (e.g. "Is the answer supposed to be a hash map?", a vague "I'm not sure where to start"),
    and it picks `wait` (producing literally no new message) where scenario #6 and #10 expect an
    `ask` — most notably, after all tests pass, `action-tests-pass-no-immediate-end` shows the
-   coach *not* asking the expected edge-case/alternative-approach follow-up. Separately, an
+   coach _not_ asking the expected edge-case/alternative-approach follow-up. Separately, an
    earlier `try_graph.py` smoke-test surfaced the same class of issue from a different angle: a
    single `HINT_REQUESTED` event escalated `candidate_status` all the way to
    `DEBUGGING_DIFFICULTY`, a status `state.py` defines as meaning 3+ failed runs — `evaluate`'s
@@ -517,3 +517,41 @@ were chosen to cover every scenario in Task 1's table plus the milestone/hint/sa
 out in this task's brief, not to be a complete state-space sweep. Full raw output (per-example
 scores + judge reasoning) is saved under `agent/evals/results/` for anyone who wants to check a
 specific verdict rather than the rollup above.
+
+## Task 6: Improving Your Prototype
+
+### Advanced retrieval: reranking (Cohere rerank-v3.5)
+
+**Why**: `retrieve_context_documents`'s one documented miss (Task 5 — the `edge-case-duplicates` query ranking the `clarification` chunk above `edge_case`) looked like exactly the kind of near-miss raw embedding similarity is bad at resolving.
+
+A dedicated cross-encoder reranker scores query-document relevance more precisely than cosine similarity between independently-computed embeddings, so we expected it to fix that ranking and tighten precision on other borderline cases.
+
+**Implementation**: `retrieve_context_documents` now over-fetches a wider candidate pool (`k*2`, minimum 8) via the existing Qdrant vector search, then reranks it down to `k` via Cohere's `rerank-v3.5` model (`agent/swell_agent/retriever.py`). `rerank=True` is the new default (used by `retrieve_problem_context` in production); `rerank=False` reproduces the pre-Task-6 baseline for comparison, via `uv run python evals/run_ragas_eval.py --no-rerank`. Reranking calls retry with a fixed delay on Cohere's trial-key rate limit (10 calls/minute) rather than failing outright, since
+both this eval suite's back-to-back queries and a real coaching session can plausibly hit it.
+
+**Results**:
+
+| Metric               | Baseline (no rerank) | Reranked |
+| -------------------- | -------------------- | -------- |
+| Top-1 doc_type match | 11/12                | 11/12    |
+| Faithfulness         | 0.983                | 0.917    |
+| Context precision    | 0.917                | 0.917    |
+| Context recall       | 0.875                | 0.875    |
+
+**Conclusion**: reranking made no measurable difference — arguably a wash-to-slightly-worse result (the faithfulness dip is plausibly LLM-judge noise, not a real regression). The specific miss we hoped to fix is unchanged: `clarification` still outranks `edge_case` for that query. On closer inspection, this isn't a fixable ranking bug — both chunks correctly and directly answer "can the array have duplicate values?", so there's no unambiguous "right" top-1 for any ranking method to converge on. More broadly, this knowledge base is tiny (20 chunks) with well-separated content per chunk, so the baseline embedding search was already close to its ceiling — there wasn't much headroom for a reranker to capture. We're keeping the implementation (harmless, and the retry-with-backoff handling makes it production-safe against Cohere's rate limits), but the honest conclusion is that it didn't move the needle on this particular retrieval corpus. A reranker would likely earn its keep more on a larger, noisier corpus than this hand-curated one.
+
+### One other improvement: hint-ladder off-by-one fix
+
+**What we changed**: `get_next_hint` (`agent/swell_agent/hints.py`) looked up `hint["level"] == hint_level + 1`, but `apply_deterministic_rules` already increments `hint_level` _before_ `respond` calls it — so on a session's first-ever hint request, `hint_level` goes 0→1, and the lookup then fetched level 2, silently skipping level 1 on every single session. Fixed by looking up `hint["level"] == hint_level` directly, matching the value's actual post-increment semantics — `hint_level` already _is_ the level to show by the time `get_next_hint` sees it.
+
+**Hard evidence** (`agent/evals/run_langsmith_eval.py`, same 18-example dataset, same LangSmith
+evaluators, before/after saved as `langsmith_summary_baseline.json` / `langsmith_summary.json`):
+
+| Metric                      | Before        | After          |
+| --------------------------- | ------------- | -------------- |
+| `hint_ladder_level_one`     | 0% (0/1)      | **100% (1/1)** |
+| `deterministic_state_match` | 64.7% (11/17) | 76.5% (13/17)  |
+| `llm_judge_rubric`          | 52.9% (9/17)  | 58.8% (10/17)  |
+| `safety_no_leak`            | 100% (5/5)    | 100% (5/5)     |
+
+The `hint_ladder_level_one` flip from 0% to 100% is the clean, directly-attributable evidence — it's the exact evaluator built to catch this exact bug, on the exact example that exercises it, and it flipped exactly as predicted. `deterministic_state_match` and `llm_judge_rubric` also improved, but we're not claiming this one fix explains all of that: some of it is plausibly the same example(s) overlapping between evaluators, and some is ordinary LLM run-to-run variance rather than a causal effect of this specific change. `safety_no_leak` is unaffected, as expected — this fix has nothing to do with solution-leak safety.

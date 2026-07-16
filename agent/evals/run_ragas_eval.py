@@ -9,11 +9,16 @@ retrieve_problem_context tool) against evals/retrieval_dataset.yaml using:
     retrieved chunks, then scoring that answer + those chunks against a
     hand-written reference answer grounded in the knowledge-base YAML.
 
-Run with: uv run python evals/run_ragas_eval.py
+Run with: uv run python evals/run_ragas_eval.py [--no-rerank]
+
+--no-rerank reproduces the pre-Task-6 baseline (plain top-k vector search, no
+Cohere reranking) for before/after comparison; default is reranked (the
+current production behavior of retrieve_problem_context).
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -50,6 +55,16 @@ def load_dataset() -> list[dict]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--no-rerank",
+        action="store_true",
+        help="Reproduce the pre-Task-6 baseline (no Cohere reranking).",
+    )
+    args = parser.parse_args()
+    rerank = not args.no_rerank
+    suffix = "" if rerank else "_baseline"
+
     entries = load_dataset()
     synthesis_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     judge_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o-mini", temperature=0))
@@ -59,7 +74,7 @@ def main() -> None:
 
     for entry in entries:
         docs = retrieve_context_documents(
-            entry["query"], doc_type=entry.get("doc_type"), k=4
+            entry["query"], doc_type=entry.get("doc_type"), k=4, rerank=rerank
         )
         contexts = [d.page_content for d in docs]
         retrieved_doc_types = [d.metadata.get("doc_type") for d in docs]
@@ -119,19 +134,20 @@ def main() -> None:
     print(means.to_string())
 
     RESULTS_DIR.mkdir(exist_ok=True)
-    df.to_json(RESULTS_DIR / "ragas_results.json", orient="records", indent=2)
-    with (RESULTS_DIR / "ragas_deterministic.json").open("w") as f:
+    df.to_json(RESULTS_DIR / f"ragas_results{suffix}.json", orient="records", indent=2)
+    with (RESULTS_DIR / f"ragas_deterministic{suffix}.json").open("w") as f:
         json.dump(deterministic_rows, f, indent=2)
-    with (RESULTS_DIR / "ragas_summary.json").open("w") as f:
+    with (RESULTS_DIR / f"ragas_summary{suffix}.json").open("w") as f:
         json.dump(
             {
+                "reranked": rerank,
                 "top1_doc_type_match": f"{n_match}/{len(deterministic_rows)}",
                 "mean_scores": means.to_dict(),
             },
             f,
             indent=2,
         )
-    print(f"\nWrote results to {RESULTS_DIR}/")
+    print(f"\nWrote results to {RESULTS_DIR}/*{suffix}.json")
 
 
 if __name__ == "__main__":

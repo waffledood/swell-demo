@@ -55,7 +55,7 @@ document that answers all of them in order. Current state:
 | 3 | Data strategy (chunking, external API/data sources) | Done |
 | 4 | End-to-end prototype + deployment | Done — agent deployed to LangGraph Platform, `fe/` (chat UI + LLM gateway) deployed to Vercel (`tryswell.vercel.app`); 4 known bugs open (see `agent/evals/FINDINGS.md` / GitHub issues #1-#4) |
 | 5 | Evals (test set + harness + conclusions) | Done — see `agent/evals/` (dataset, RAGAS harness, LangSmith LLM-as-judge harness) and Task 5 in `README.md` |
-| 6 | Advanced retrieval + one more improvement, with before/after comparison | Not started |
+| 6 | Advanced retrieval + one more improvement, with before/after comparison | Done — Cohere reranking (neutral result, honestly reported) + hint-ladder off-by-one fix (`hint_ladder_level_one` 0%→100%), both with before/after via the eval harness. See Task 6 in `README.md`. Note: bug #2 is now fixed; #1, #3, #4 (GitHub issues) still open |
 | 7 | Next steps / Demo Day reflection | Not started |
 
 When picking up work, check which task is next in this table rather than assuming the rubric

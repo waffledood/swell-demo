@@ -15,10 +15,12 @@ are looked up deterministically by hint_level instead.
 from __future__ import annotations
 
 import os
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal, Optional
 
+import cohere
 import yaml
 from langchain_core.documents import Document
 from langchain_core.tools import tool
@@ -27,6 +29,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import models
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_RERANK_MODEL = "rerank-v3.5"
 DEFAULT_KNOWLEDGE_BASE_DIR = (
     Path(__file__).resolve().parents[1] / "knowledge-base" / "two-sum"
 )
@@ -186,14 +189,62 @@ DocType = Literal[
 ]
 
 
+@lru_cache(maxsize=1)
+def _get_cohere_client() -> cohere.ClientV2:
+    return cohere.ClientV2(api_key=os.environ["COHERE_API_KEY"])
+
+
+_RERANK_MAX_RETRIES = 10
+_RERANK_RETRY_DELAY_SECONDS = 7  # trial key: 10 calls/min ceiling -> ~6s/call pace
+
+
+def _rerank(query: str, documents: list[Document], top_n: int) -> list[Document]:
+    """Reorders documents by a dedicated cross-encoder reranker (Cohere
+    rerank-v3.5) instead of trusting raw embedding-similarity order. Added for
+    Task 6 - our one documented retrieval miss (edge-case-duplicates ranking
+    the clarification chunk above the edge_case chunk) is exactly the kind of
+    near-miss embedding similarity is bad at and rerankers are built for.
+
+    Retries on 429s with a fixed delay matched to the actual rate limit -
+    Cohere trial keys are capped at 10 calls/minute, so a real coaching
+    session (or this eval suite's 12 back-to-back queries) can plausibly hit
+    that ceiling; a short exponential backoff isn't generous enough for a
+    hard per-minute cap."""
+    if not documents:
+        return documents
+
+    for attempt in range(_RERANK_MAX_RETRIES):
+        try:
+            response = _get_cohere_client().rerank(
+                model=DEFAULT_RERANK_MODEL,
+                query=query,
+                documents=[doc.page_content for doc in documents],
+                top_n=top_n,
+            )
+            return [documents[result.index] for result in response.results]
+        except cohere.errors.too_many_requests_error.TooManyRequestsError:
+            if attempt == _RERANK_MAX_RETRIES - 1:
+                raise
+            time.sleep(_RERANK_RETRY_DELAY_SECONDS)
+
+    return documents  # unreachable, satisfies type checkers
+
+
 def retrieve_context_documents(
-    query: str, doc_type: Optional[DocType] = None, k: int = 4
+    query: str,
+    doc_type: Optional[DocType] = None,
+    k: int = 4,
+    rerank: bool = True,
 ) -> list[Document]:
     """Shared retrieval path underneath retrieve_problem_context, returning raw
     Documents instead of the tool's joined string. Factored out so eval harnesses
     (see agent/evals/run_ragas_eval.py) can inspect individual retrieved chunks -
     e.g. per-chunk doc_type and page_content - without re-implementing the filter
-    logic or re-parsing the tool's formatted output."""
+    logic or re-parsing the tool's formatted output.
+
+    rerank=False reproduces the pre-Task-6 baseline (plain top-k vector search)
+    for before/after comparison; rerank=True (the default, used in production)
+    over-fetches a wider candidate pool and reranks it down to k."""
     query_filter = None
     if doc_type is not None:
         query_filter = models.Filter(
@@ -203,7 +254,15 @@ def retrieve_context_documents(
                 )
             ]
         )
-    return _get_vectorstore().similarity_search(query, k=k, filter=query_filter)
+
+    if not rerank:
+        return _get_vectorstore().similarity_search(query, k=k, filter=query_filter)
+
+    candidate_pool_size = max(k * 2, 8)
+    candidates = _get_vectorstore().similarity_search(
+        query, k=candidate_pool_size, filter=query_filter
+    )
+    return _rerank(query, candidates, top_n=k)
 
 
 @tool

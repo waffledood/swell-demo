@@ -7,7 +7,7 @@
     "retrieved_doc_types": [
       "clarification",
       "edge_case",
-      "milestone",
+      "clarification",
       "clarification"
     ],
     "top1_match": false
@@ -138,7 +138,7 @@
       "reference_solution",
       "reference_solution",
       "milestone",
-      "constraints"
+      "example_test_cases"
     ],
     "top1_match": true
   }
