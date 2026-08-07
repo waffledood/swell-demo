@@ -289,15 +289,22 @@ def respond(state: InterviewState) -> dict:
 
 def finish_check(state: InterviewState) -> dict:
     milestones = state["milestones"]
+    already_completed = state["status"] == "COMPLETED"
     done = (
         milestones["IMPLEMENTS_CORRECT_SOLUTION"]["status"] == "COMPLETED"
         and milestones["HANDLES_EDGE_CASES"]["status"] == "COMPLETED"
     )
-    return {"status": "COMPLETED" if done else "IN_PROGRESS"}
+    return {
+        "status": "COMPLETED" if done else "IN_PROGRESS",
+        # Only the turn that *crosses into* COMPLETED should generate feedback -
+        # milestones never get un-COMPLETED, so without this every later event
+        # in the same session would regenerate the closing report.
+        "just_completed": done and not already_completed,
+    }
 
 
 def route_finish(state: InterviewState) -> str:
-    return "generate_feedback" if state["status"] == "COMPLETED" else "__end__"
+    return "generate_feedback" if state["just_completed"] else "__end__"
 
 
 # ---------------------------------------------------------------------------
@@ -320,3 +327,25 @@ def generate_feedback(state: InterviewState) -> dict:
     messages = [SystemMessage(content=system_prompt), *state["messages"]]
     ai_message = model.invoke(messages)
     return {"messages": [ai_message]}
+
+
+if __name__ == "__main__":
+    # Self-check: generate_feedback should fire on the turn that completes the
+    # session, but not on any later turn once status is already COMPLETED.
+    _done_milestones = {
+        "IMPLEMENTS_CORRECT_SOLUTION": {"status": "COMPLETED"},
+        "HANDLES_EDGE_CASES": {"status": "COMPLETED"},
+    }
+
+    _first_turn = {"status": "IN_PROGRESS", "milestones": _done_milestones}
+    _first_update = finish_check(_first_turn)
+    assert _first_update["status"] == "COMPLETED"
+    assert _first_update["just_completed"] is True
+    assert route_finish({**_first_turn, **_first_update}) == "generate_feedback"
+
+    _later_turn = {"status": "COMPLETED", "milestones": _done_milestones}
+    _later_update = finish_check(_later_turn)
+    assert _later_update["just_completed"] is False
+    assert route_finish({**_later_turn, **_later_update}) == "__end__"
+
+    print("finish_check/route_finish self-check passed")
