@@ -56,6 +56,7 @@ export function Chat() {
 
   const hintLevel = stream.values?.hint_level ?? 0;
   const candidateStatus = stream.values?.candidate_status;
+  const isComplete = stream.values?.status === "COMPLETED";
 
   function submitEvent(type, payload) {
     stream.submit({
@@ -66,14 +67,14 @@ export function Chat() {
   function handleSend(event) {
     event.preventDefault();
     const text = input.trim();
-    if (!text || stream.isLoading) return;
+    if (!text || stream.isLoading || isComplete) return;
 
     submitEvent("CANDIDATE_MESSAGE", { text });
     setInput("");
   }
 
   function handleRequestHint() {
-    if (stream.isLoading) return;
+    if (stream.isLoading || isComplete) return;
     submitEvent("HINT_REQUESTED", {});
   }
 
@@ -85,10 +86,16 @@ export function Chat() {
     <section className="flex min-h-0 flex-col border-l border-slate-200 bg-white">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-4">
         <p className="text-sm font-medium text-slate-950">Interview Chat</p>
-        {candidateStatus && candidateStatus !== "PROGRESSING" && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-            {candidateStatus.replaceAll("_", " ").toLowerCase()}
+        {isComplete ? (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+            interview complete
           </span>
+        ) : (
+          candidateStatus && candidateStatus !== "PROGRESSING" && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+              {candidateStatus.replaceAll("_", " ").toLowerCase()}
+            </span>
+          )
         )}
       </div>
 
@@ -121,13 +128,13 @@ export function Chat() {
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Type your response…"
-            disabled={stream.isLoading}
+            placeholder={isComplete ? "Interview complete" : "Type your response…"}
+            disabled={stream.isLoading || isComplete}
             className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={stream.isLoading || !input.trim()}
+            disabled={stream.isLoading || isComplete || !input.trim()}
             className="shrink-0 rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-teal-700 disabled:opacity-50"
           >
             Send
@@ -136,7 +143,7 @@ export function Chat() {
         <button
           type="button"
           onClick={handleRequestHint}
-          disabled={stream.isLoading}
+          disabled={stream.isLoading || isComplete}
           className="mt-2 text-xs font-medium text-teal-700 hover:underline disabled:opacity-50"
         >
           Request a hint (level {hintLevel})

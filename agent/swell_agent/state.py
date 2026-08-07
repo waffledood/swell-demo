@@ -73,6 +73,7 @@ class InterviewState(TypedDict):
     incoming_event: InterviewEvent
     pending_evaluation: Optional[dict]
     recommended_action: Optional[RecommendedAction]
+    just_completed: bool
 
 
 def new_session_defaults() -> dict:
