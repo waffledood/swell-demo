@@ -14,13 +14,6 @@ const resizerWidth = 8;
 function ProblemPanel() {
   return (
     <section className="flex min-h-0 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-6 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
-          Array · Hash Table
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-950">Two Sum</h1>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 text-sm leading-6 text-slate-700">
         <p>
           Given an array of integers <code>nums</code> and an integer{" "}
@@ -47,23 +40,6 @@ function ProblemPanel() {
           <p>Input: nums = [3,2,4], target = 6</p>
           <p>Output: [1,2]</p>
         </div>
-
-        <h2 className="mt-8 text-sm font-semibold text-slate-950">
-          Constraints
-        </h2>
-
-        <ul className="mt-3 list-disc space-y-2 pl-5">
-          <li>
-            <code>2 &lt;= nums.length &lt;= 10,000</code>
-          </li>
-          <li>
-            <code>-1,000,000,000 &lt;= nums[i] &lt;= 1,000,000,000</code>
-          </li>
-          <li>
-            <code>-1,000,000,000 &lt;= target &lt;= 1,000,000,000</code>
-          </li>
-          <li>Only one valid answer exists.</li>
-        </ul>
       </div>
     </section>
   );
